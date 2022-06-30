@@ -2,13 +2,8 @@ package telnet
 
 import "io"
 
-const readerCapacity = 1024
-
 func NewReader(r io.Reader) io.Reader {
-	result := &reader{
-		in:  r,
-		buf: make([]byte, readerCapacity),
-	}
+	result := &reader{in: r}
 	result.state = result.decodeByte
 	return result
 }
@@ -24,8 +19,9 @@ type readerState func(byte) (readerState, byte, bool)
 func (r *reader) Read(p []byte) (n int, err error) {
 	if len(r.b) == 0 {
 		var n int
-		n, err = r.in.Read(r.buf)
-		r.b = r.buf[:n]
+		r.b = make([]byte, len(p))
+		n, err = r.in.Read(r.b)
+		r.b = r.b[:n]
 	}
 	for len(r.b) > 0 && n < len(p) {
 		var c byte
