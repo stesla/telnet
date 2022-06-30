@@ -2,6 +2,8 @@ package telnet
 
 import (
 	"bytes"
+	"errors"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -77,4 +79,33 @@ func TestSplitInput(t *testing.T) {
 		assert.Equal(t, test.len2, n2)
 		assert.Equal(t, test.expected, buf[:n1+n2])
 	}
+}
+
+type boomReader int
+
+func (r boomReader) Read(b []byte) (n int, err error) {
+	for i := 0; i < int(r) && i < len(b); i++ {
+		b[i] = 'A' + byte(i)
+	}
+	return int(r), errors.New("boom")
+}
+
+func TestErrorReading(t *testing.T) {
+	r := NewReader(boomReader(3))
+	buf := make([]byte, 16)
+	n, err := r.Read(buf)
+	buf = buf[:n]
+	assert.ErrorContains(t, err, "boom")
+	assert.Equal(t, []byte("ABC"), buf)
+}
+
+func TestEOFOnSeparateRead(t *testing.T) {
+	r := NewReader(bytes.NewBufferString("hi"))
+	buf := make([]byte, 16)
+	n, err := r.Read(buf)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("hi"), buf[:n])
+	n, err = r.Read(buf)
+	assert.Error(t, io.EOF)
+	assert.Equal(t, 0, n)
 }
