@@ -65,7 +65,7 @@ func (r *reader) decodeCommand(c byte) readerStateTransition {
 	case DO, DONT, WILL, WONT:
 		return readerStateTransition{state: r.decodeOption(c), c: c, ok: false}
 	case GA:
-		return readerStateTransition{state: r.decodeByte, c: c, ok: false, err: telnetGoAhead}
+		return readerStateTransition{state: r.decodeByte, c: c, ok: false, err: &telnetGoAhead{}}
 	case SB:
 		return readerStateTransition{state: r.decodeSubnegotiation(), c: c, ok: false}
 	default:

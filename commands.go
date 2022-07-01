@@ -107,7 +107,11 @@ func (c charsetByte) String() string {
 	return fmt.Sprintf("%X", uint8(c))
 }
 
-var telnetGoAhead = fmt.Errorf("IAC GA")
+type telnetGoAhead struct{}
+
+func (t telnetGoAhead) Error() string {
+	return "IAC GA"
+}
 
 type telnetOptionCommand struct {
 	cmd commandByte
