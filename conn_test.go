@@ -2,6 +2,7 @@ package telnet
 
 import (
 	"bytes"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,11 +25,11 @@ func TestNaiveOptions(t *testing.T) {
 		expectedr, expectedw []byte
 	}{
 		{[]byte{'h', IAC, DO, Echo, 'i'}, []byte("hi"), []byte{IAC, WONT, Echo}},
-		{[]byte{'h', IAC, DONT, Echo, 'i'}, []byte("hi"), []byte{IAC, WONT, Echo}},
+		{[]byte{'h', IAC, DONT, Echo, 'i'}, []byte("hi"), nil},
 		{[]byte{'h', IAC, WILL, Echo, 'i'}, []byte("hi"), []byte{IAC, DONT, Echo}},
-		{[]byte{'h', IAC, WONT, Echo, 'i'}, []byte("hi"), []byte{IAC, DONT, Echo}},
+		{[]byte{'h', IAC, WONT, Echo, 'i'}, []byte("hi"), nil},
 	}
-	for _, test := range tests {
+	for i, test := range tests {
 		in := bytes.NewBuffer(test.in)
 		var out bytes.Buffer
 		conn := newConnection(in, &out)
@@ -40,7 +41,8 @@ func TestNaiveOptions(t *testing.T) {
 			nn, err = conn.Read(buf[n:])
 			n += nn
 		}
-		assert.Equal(t, test.expectedr, buf[:n])
-		assert.Equal(t, test.expectedw, out.Bytes())
+		assert.Equal(t, io.EOF, err, "test %d", i)
+		assert.Equal(t, test.expectedr, buf[:n], "test %d", i)
+		assert.Equal(t, test.expectedw, out.Bytes(), "test %d", i)
 	}
 }
