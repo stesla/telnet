@@ -116,7 +116,7 @@ func TestTelnetCommand(t *testing.T) {
 		in, expected []byte
 		err          error
 	}{
-		{[]byte{'h', IAC, GA, 'i'}, []byte("hi"), telnetGoAhead},
+		{[]byte{'h', IAC, GA, 'i'}, []byte("hi"), &telnetGoAhead{}},
 		{[]byte{'h', IAC, DO, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{DO, Echo}},
 		{[]byte{'h', IAC, DONT, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{DONT, Echo}},
 		{[]byte{'h', IAC, WILL, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{WILL, Echo}},
