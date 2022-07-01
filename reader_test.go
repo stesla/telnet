@@ -109,3 +109,27 @@ func TestEOFOnSeparateRead(t *testing.T) {
 	assert.Error(t, io.EOF)
 	assert.Equal(t, 0, n)
 }
+
+func TestTelnetCommand(t *testing.T) {
+	var tests = []struct {
+		in, expected []byte
+		err          error
+	}{
+		{[]byte{'h', IAC, GA, 'i'}, []byte("hi"), telnetGoAhead},
+		{[]byte{'h', IAC, DO, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{DO, Echo}},
+		{[]byte{'h', IAC, DONT, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{DONT, Echo}},
+		{[]byte{'h', IAC, WILL, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{WILL, Echo}},
+		{[]byte{'h', IAC, WONT, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{WONT, Echo}},
+		{[]byte{'h', IAC, SB, 'f', 'o', 'o', IAC, SE, 'i'}, []byte("hi"), &telnetSubnegotiation{[]byte("foo")}},
+		{[]byte{'h', IAC, SB, IAC, IAC, IAC, SE, 'i'}, []byte("hi"), &telnetSubnegotiation{[]byte{IAC}}},
+	}
+	for _, test := range tests {
+		r := NewReader(bytes.NewBuffer(test.in))
+		buf := make([]byte, 16)
+		n1, err := r.Read(buf)
+		assert.Equal(t, test.err, err, "%v", test.err)
+		n2, err := r.Read(buf[n1:])
+		assert.NoError(t, err, "%v", test.err)
+		assert.Equal(t, test.expected, buf[:n1+n2], "%v", test.err)
+	}
+}
