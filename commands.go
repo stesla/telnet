@@ -106,3 +106,22 @@ func (c charsetByte) String() string {
 	}
 	return fmt.Sprintf("%X", uint8(c))
 }
+
+var telnetGoAhead = fmt.Errorf("IAC GA")
+
+type telnetOptionCommand struct {
+	cmd commandByte
+	opt optionByte
+}
+
+func (t telnetOptionCommand) Error() string {
+	return fmt.Sprintf("IAC %s %s", t.cmd, t.opt)
+}
+
+type telnetSubnegotiation struct {
+	bytes []byte
+}
+
+func (t telnetSubnegotiation) Error() string {
+	return fmt.Sprintf("IAC SB %q IAC SE", t.bytes)
+}
