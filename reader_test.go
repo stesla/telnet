@@ -26,6 +26,7 @@ func TestSimple(t *testing.T) {
 		{[]byte{'h', IAC, IAC, 'i'}, []byte{'h', IAC, 'i'}},
 		{[]byte("foo\r\nbar"), []byte("foo\nbar")},
 		{[]byte("foo\r\x00bar"), []byte("foo\rbar")},
+		{[]byte{'h', IAC, SB, IAC, SE, 'i'}, []byte("hi")},
 	}
 	for _, test := range tests {
 		buf, err := readTest(test.in)
@@ -127,7 +128,9 @@ func TestTelnetCommand(t *testing.T) {
 		r := NewReader(bytes.NewBuffer(test.in))
 		buf := make([]byte, 16)
 		n1, err := r.Read(buf)
-		assert.Equal(t, test.err, err, "%v", test.err)
+		if assert.Error(t, err, "%v", test.err) {
+			assert.Equal(t, test.err, err, "%v", test.err)
+		}
 		n2, err := r.Read(buf[n1:])
 		assert.NoError(t, err, "%v", test.err)
 		assert.Equal(t, test.expected, buf[:n1+n2], "%v", test.err)

@@ -114,7 +114,10 @@ func (r *reader) decodeSubnegotiation() readerState {
 			buf = append(buf, c)
 			return readerStateTransition{state: readByte, c: c, ok: false}
 		case SE:
-			err := &telnetSubnegotiation{buf}
+			var err error
+			if len(buf) > 0 {
+				err = &telnetSubnegotiation{buf}
+			}
 			return readerStateTransition{state: r.decodeByte, c: c, ok: false, err: err}
 		default:
 			err := fmt.Errorf("IAC %b", commandByte(c))
