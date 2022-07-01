@@ -3,22 +3,22 @@ package telnet
 import "io"
 
 type connection struct {
-	io.Reader
-	io.Writer
-
+	in  io.Reader
 	out io.Writer
+
+	io.Writer
 }
 
 func newConnection(r io.Reader, w io.Writer) *connection {
 	return &connection{
-		Reader: NewReader(r),
-		Writer: NewWriter(w),
+		in:     NewReader(r),
 		out:    w,
+		Writer: NewWriter(w),
 	}
 }
 
 func (c *connection) Read(p []byte) (n int, err error) {
-	n, err = c.Reader.Read(p)
+	n, err = c.in.Read(p)
 	switch t := err.(type) {
 	case *telnetGoAhead:
 		err = nil
