@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGoAhead(t *testing.T) {
+func TestReadGoAhead(t *testing.T) {
 	in := bytes.NewBuffer([]byte{'h', IAC, GA, 'i'})
 	conn := newConnection(in, nil)
 	buf := make([]byte, 8)
@@ -17,6 +17,15 @@ func TestGoAhead(t *testing.T) {
 	n2, err := conn.Read(buf[n1:])
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n1+n2])
+}
+
+func TestWriteGoAhead(t *testing.T) {
+	var buf bytes.Buffer
+	conn := newConnection(nil, &buf)
+	n, err := conn.Write([]byte("foo"))
+	assert.NoError(t, err)
+	assert.Equal(t, 3, n)
+	assert.Equal(t, []byte{'f', 'o', 'o', IAC, GA}, buf.Bytes())
 }
 
 func TestNaiveOptions(t *testing.T) {
