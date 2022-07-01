@@ -27,13 +27,10 @@ func (c *connection) Read(p []byte) (n int, err error) {
 		err = nil
 	case *telnetOptionCommand:
 		err = nil
-		switch t.cmd {
-		case DO, DONT, WILL, WONT:
-			opt := c.opts.get(byte(t.opt))
-			opt.receive(byte(t.cmd), func(cmd byte) {
-				_, err = c.out.Write([]byte{IAC, cmd, byte(t.opt)})
-			})
-		}
+		opt := c.opts.get(byte(t.opt))
+		opt.receive(byte(t.cmd), func(cmd byte) {
+			_, err = c.out.Write([]byte{IAC, cmd, byte(t.opt)})
+		})
 	}
 	return
 }
