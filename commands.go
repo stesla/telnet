@@ -6,24 +6,24 @@ type commandByte byte
 
 const (
 	// RFC 885
-	EOR = 239 + iota
+	EOR = 239 + iota // ef
 	// RFC 854
-	SE
-	NOP
-	DM
-	BRK
-	IP
-	AO
-	AYT
-	EC
-	EL
-	GA
-	SB
-	WILL
-	WONT
-	DO
-	DONT
-	IAC
+	SE   // f0
+	NOP  // f1
+	DM   // f2
+	BRK  // f3
+	IP   // f4
+	AO   // f5
+	AYT  // f6
+	EC   // f7
+	EL   // f8
+	GA   // f9
+	SB   // fa
+	WILL // fb
+	WONT // fc
+	DO   // fd
+	DONT // fe
+	IAC  // ff
 )
 
 func (c commandByte) String() string {
