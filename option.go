@@ -30,6 +30,62 @@ func newOption(c byte) *option {
 	return &option{code: c}
 }
 
+type sendfunc func(p ...byte) error
+
+func (o *option) disableThem(send sendfunc) error {
+	return o.disable(&o.them, DONT, send)
+}
+
+func (o *option) disableUs(send sendfunc) error {
+	return o.disable(&o.us, WONT, send)
+}
+
+func (o *option) disable(state *telnetQState, cmd byte, send sendfunc) error {
+	switch *state {
+	case telnetQNo:
+		// ignore
+	case telnetQYes:
+		*state = telnetQWantNoEmpty
+		return send(IAC, cmd, o.code)
+	case telnetQWantNoEmpty:
+		// ignore
+	case telnetQWantNoOpposite:
+		*state = telnetQWantNoEmpty
+	case telnetQWantYesEmpty:
+		*state = telnetQWantYesOpposite
+	case telnetQWantYesOpposite:
+		// ignore
+	}
+	return nil
+}
+
+func (o *option) enableThem(send sendfunc) error {
+	return o.enable(&o.them, DO, send)
+}
+
+func (o *option) enableUs(send sendfunc) error {
+	return o.enable(&o.us, WILL, send)
+}
+
+func (o *option) enable(state *telnetQState, cmd byte, send sendfunc) error {
+	switch *state {
+	case telnetQNo:
+		*state = telnetQWantYesEmpty
+		return send(IAC, cmd, o.code)
+	case telnetQYes:
+		// ignore
+	case telnetQWantNoEmpty:
+		*state = telnetQWantNoOpposite
+	case telnetQWantNoOpposite:
+		// ignore
+	case telnetQWantYesEmpty:
+		// ignore
+	case telnetQWantYesOpposite:
+		*state = telnetQWantYesEmpty
+	}
+	return nil
+}
+
 func (o *option) receive(c byte, fn func(byte)) {
 	switch c {
 	case DO:
