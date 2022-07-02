@@ -2,7 +2,7 @@ package telnet
 
 import (
 	"bytes"
-	"io"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,16 +42,9 @@ func TestNaiveOptions(t *testing.T) {
 		in := bytes.NewBuffer(test.in)
 		var out bytes.Buffer
 		conn := newConnection(in, &out)
-		buf := make([]byte, 8)
-		var err error
-		var n int
-		for err == nil {
-			var nn int
-			nn, err = conn.Read(buf[n:])
-			n += nn
-		}
-		assert.Equal(t, io.EOF, err, "test %d", i)
-		assert.Equal(t, test.expectedr, buf[:n], "test %d", i)
+		buf, err := ioutil.ReadAll(conn)
+		assert.NoError(t, err, "test %d", i)
+		assert.Equal(t, test.expectedr, buf, "test %d", i)
 		assert.Equal(t, test.expectedw, out.Bytes(), "test %d", i)
 	}
 }
