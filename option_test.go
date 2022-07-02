@@ -1,6 +1,7 @@
 package telnet
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,203 +11,125 @@ type qMethodTest struct {
 	start, end telnetQState
 	permitted  bool
 	expected   byte
+
+	state *telnetQState
+
+	// for the receive test
+	receive byte
+	allow   *bool
+
+	// for the enable/disable test
+	fn func(sendfunc) error
 }
 
-func TestQMethodReceiveDO(t *testing.T) {
-	tests := []*qMethodTest{
-		&qMethodTest{start: telnetQNo, permitted: false, end: telnetQNo, expected: WONT},
-		&qMethodTest{start: telnetQNo, permitted: true, end: telnetQYes, expected: WILL},
-		&qMethodTest{start: telnetQYes, end: telnetQYes},
-		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQNo},
-		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQYes},
-		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQYes},
-		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQWantNoEmpty, expected: WONT},
-	}
-	for i, q := range tests {
-		o := newOption(SuppressGoAhead)
-		o.us, o.allowUs = q.start, q.permitted
-		var called bool
-		o.receive(DO, func(c byte) {
-			called = true
-			assert.Equal(t, q.expected, c, "test %d", i)
-		})
-		assert.Equal(t, q.expected != 0, called, "test %d", i)
-		assert.Equal(t, q.end, o.us, "test %d", i)
-	}
+func themFn(opt *option, state telnetQState, allowed bool) {
+	opt.them, opt.allowThem = state, allowed
 }
 
-func TestQMethodReceiveDONT(t *testing.T) {
-	tests := []*qMethodTest{
-		&qMethodTest{start: telnetQNo, end: telnetQNo},
-		&qMethodTest{start: telnetQYes, end: telnetQNo, expected: WONT},
-		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQNo},
-		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantYesEmpty, expected: WILL},
-		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQNo},
-		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQNo},
-	}
-	for i, q := range tests {
-		o := newOption(SuppressGoAhead)
-		o.us, o.allowUs = q.start, q.permitted
-		var called bool
-		o.receive(DONT, func(c byte) {
-			called = true
-			assert.Equal(t, q.expected, c, "test %d", i)
-		})
-		assert.Equal(t, q.expected != 0, called, "test %d", i)
-		assert.Equal(t, q.end, o.us, "test %d", i)
-	}
+func usFn(opt *option, state telnetQState, allowed bool) {
+	opt.us, opt.allowUs = state, allowed
 }
 
-func TestQMethodReceiveWILL(t *testing.T) {
+func TestQMethodReceive(t *testing.T) {
+	o := newOption(SuppressGoAhead)
 	tests := []*qMethodTest{
-		&qMethodTest{start: telnetQNo, permitted: false, end: telnetQNo, expected: DONT},
-		&qMethodTest{start: telnetQNo, permitted: true, end: telnetQYes, expected: DO},
-		&qMethodTest{start: telnetQYes, end: telnetQYes},
-		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQNo},
-		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQYes},
-		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQYes},
-		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQWantNoEmpty, expected: DONT},
-	}
-	for i, q := range tests {
-		o := newOption(SuppressGoAhead)
-		o.them, o.allowThem = q.start, q.permitted
-		var called bool
-		o.receive(WILL, func(c byte) {
-			called = true
-			assert.Equal(t, q.expected, c, "test %d", i)
-		})
-		assert.Equal(t, q.expected != 0, called, "test %d", i)
-		assert.Equal(t, q.end, o.them, "test %d", i)
-	}
-}
-
-func TestQMethodReceiveWONT(t *testing.T) {
-	tests := []*qMethodTest{
-		&qMethodTest{start: telnetQNo, end: telnetQNo},
-		&qMethodTest{start: telnetQYes, end: telnetQNo, expected: DONT},
-		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQNo},
-		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantYesEmpty, expected: DO},
-		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQNo},
-		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQNo},
-	}
-	for i, q := range tests {
-		o := newOption(SuppressGoAhead)
-		o.them, o.allowThem = q.start, q.permitted
-		var called bool
-		o.receive(WONT, func(c byte) {
-			called = true
-			assert.Equal(t, q.expected, c, "test %d", i)
-		})
-		assert.Equal(t, q.expected != 0, called, "test %d", i)
-		assert.Equal(t, q.end, o.them, "test %d", i)
-
-	}
-}
-
-func TestQMethodAskEnableThem(t *testing.T) {
-	tests := []*qMethodTest{
-		&qMethodTest{start: telnetQNo, end: telnetQWantYesEmpty, expected: DO},
-		&qMethodTest{start: telnetQYes, end: telnetQYes},
-		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQWantNoOpposite},
-		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantNoOpposite},
-		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQWantYesEmpty},
-		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQWantYesEmpty},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQNo, permitted: false, end: telnetQNo, expected: WONT},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQNo, permitted: true, end: telnetQYes, expected: WILL},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQYes, end: telnetQYes},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantNoEmpty, end: telnetQNo},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantNoOpposite, end: telnetQYes},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantYesEmpty, end: telnetQYes},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantYesOpposite, end: telnetQWantNoEmpty, expected: WONT},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQNo, end: telnetQNo},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQYes, end: telnetQNo, expected: WONT},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantNoEmpty, end: telnetQNo},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantNoOpposite, end: telnetQWantYesEmpty, expected: WILL},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantYesEmpty, end: telnetQNo},
+		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantYesOpposite, end: telnetQNo},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQNo, permitted: false, end: telnetQNo, expected: DONT},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQNo, permitted: true, end: telnetQYes, expected: DO},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQYes, end: telnetQYes},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantNoEmpty, end: telnetQNo},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantNoOpposite, end: telnetQYes},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantYesEmpty, end: telnetQYes},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantYesOpposite, end: telnetQWantNoEmpty, expected: DONT},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQNo, end: telnetQNo},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQYes, end: telnetQNo, expected: DONT},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantNoEmpty, end: telnetQNo},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantNoOpposite, end: telnetQWantYesEmpty, expected: DO},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantYesEmpty, end: telnetQNo},
+		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantYesOpposite, end: telnetQNo},
 	}
 	for _, q := range tests {
-		o := newOption(SuppressGoAhead)
-		o.them = q.start
+		testMsg := fmt.Sprintf("test %s %s %v", commandByte(q.receive), q.start, q.permitted)
+		*q.state, *q.allow = q.start, q.permitted
+		var called bool
+		o.receive(q.receive, func(c byte) {
+			called = true
+			assert.Equal(t, q.expected, c, testMsg)
+		})
+		assert.Equal(t, q.expected != 0, called, testMsg)
+		assert.Equal(t, q.end, *q.state, testMsg)
+	}
+}
+
+func TestQMethodEnableOrDisable(t *testing.T) {
+	o := newOption(SuppressGoAhead)
+	disableThem := fmt.Sprintf("%p", o.disableThem)
+	disableUs := fmt.Sprintf("%p", o.disableUs)
+	enableThem := fmt.Sprintf("%p", o.enableThem)
+	enableUs := fmt.Sprintf("%p", o.enableUs)
+	tests := []*qMethodTest{
+		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQNo, end: telnetQNo},
+		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQYes, end: telnetQWantNoEmpty, expected: DONT},
+		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQWantNoEmpty, end: telnetQWantNoEmpty},
+		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQWantNoOpposite, end: telnetQWantNoEmpty},
+		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQWantYesEmpty, end: telnetQWantYesOpposite},
+		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQWantYesOpposite, end: telnetQWantYesOpposite},
+		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQNo, end: telnetQNo},
+		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQYes, end: telnetQWantNoEmpty, expected: WONT},
+		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQWantNoEmpty, end: telnetQWantNoEmpty},
+		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQWantNoOpposite, end: telnetQWantNoEmpty},
+		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQWantYesEmpty, end: telnetQWantYesOpposite},
+		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQWantYesOpposite, end: telnetQWantYesOpposite},
+		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQNo, end: telnetQWantYesEmpty, expected: DO},
+		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQYes, end: telnetQYes},
+		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQWantNoEmpty, end: telnetQWantNoOpposite},
+		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQWantNoOpposite, end: telnetQWantNoOpposite},
+		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQWantYesEmpty, end: telnetQWantYesEmpty},
+		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQWantYesOpposite, end: telnetQWantYesEmpty},
+		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQNo, end: telnetQWantYesEmpty, expected: WILL},
+		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQYes, end: telnetQYes},
+		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQWantNoEmpty, end: telnetQWantNoOpposite},
+		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQWantNoOpposite, end: telnetQWantNoOpposite},
+		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQWantYesEmpty, end: telnetQWantYesEmpty},
+		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQWantYesOpposite, end: telnetQWantYesEmpty},
+	}
+	for _, q := range tests {
+		var action, who string
+		switch fmt.Sprintf("%p", q.fn) {
+		case disableThem:
+			action, who = "disable", "them"
+		case disableUs:
+			action, who = "disable", "us"
+		case enableThem:
+			action, who = "enable", "them"
+		case enableUs:
+			action, who = "enable", "us"
+		}
+		testMsg := fmt.Sprintf("test %s %s %s", action, who, q.start)
+		*q.state = q.start
 		called := false
-		err := o.enableThem(func(p ...byte) error {
+		err := q.fn(func(p ...byte) error {
 			called = true
 			if q.expected != 0 {
-				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p)
+				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p, testMsg)
 			}
 			return nil
 		})
 		if q.expected != 0 {
-			assert.True(t, called)
+			assert.True(t, called, testMsg)
 		}
-		assert.NoError(t, err)
-	}
-}
-
-func TestQMethodDisableThem(t *testing.T) {
-	tests := []*qMethodTest{
-		&qMethodTest{start: telnetQNo, end: telnetQNo},
-		&qMethodTest{start: telnetQYes, end: telnetQWantNoEmpty, expected: DONT},
-		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQWantNoEmpty},
-		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantNoEmpty},
-		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQWantYesOpposite},
-		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQWantYesOpposite},
-	}
-	for _, q := range tests {
-		o := newOption(SuppressGoAhead)
-		o.them = q.start
-		called := false
-		err := o.disableThem(func(p ...byte) error {
-			called = true
-			if q.expected != 0 {
-				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p)
-			}
-			return nil
-		})
-		if q.expected != 0 {
-			assert.True(t, called)
-		}
-		assert.NoError(t, err)
-	}
-}
-
-func TestQMethodEnableUs(t *testing.T) {
-	tests := []*qMethodTest{
-		&qMethodTest{start: telnetQNo, end: telnetQWantYesEmpty, expected: WILL},
-		&qMethodTest{start: telnetQYes, end: telnetQYes},
-		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQWantNoOpposite},
-		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantNoOpposite},
-		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQWantYesEmpty},
-		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQWantYesEmpty},
-	}
-	for _, q := range tests {
-		o := newOption(SuppressGoAhead)
-		o.us = q.start
-		called := false
-		err := o.enableUs(func(p ...byte) error {
-			called = true
-			if q.expected != 0 {
-				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p)
-			}
-			return nil
-		})
-		if q.expected != 0 {
-			assert.True(t, called)
-		}
-		assert.NoError(t, err)
-	}
-}
-
-func TestQMethodDisableUs(t *testing.T) {
-	tests := []*qMethodTest{
-		&qMethodTest{start: telnetQNo, end: telnetQNo},
-		&qMethodTest{start: telnetQYes, end: telnetQWantNoEmpty, expected: WONT},
-		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQWantNoEmpty},
-		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantNoEmpty},
-		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQWantYesOpposite},
-		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQWantYesOpposite},
-	}
-	for _, q := range tests {
-		o := newOption(SuppressGoAhead)
-		o.us = q.start
-		called := false
-		err := o.disableUs(func(p ...byte) error {
-			called = true
-			if q.expected != 0 {
-				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p)
-			}
-			return nil
-		})
-		if q.expected != 0 {
-			assert.True(t, called)
-		}
-		assert.NoError(t, err)
+		assert.NoError(t, err, testMsg)
 	}
 }
