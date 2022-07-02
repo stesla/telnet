@@ -1,6 +1,30 @@
 package telnet
 
-import "io"
+import (
+	"io"
+	"net"
+)
+
+type Conn interface {
+	io.Reader
+	io.Writer
+}
+
+func Client(conn net.Conn) Conn {
+	return newConnection(conn, conn)
+}
+
+func Dial(addr string) (Conn, error) {
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	return Client(conn), nil
+}
+
+func Server(conn net.Conn) Conn {
+	return newConnection(conn, conn)
+}
 
 type connection struct {
 	in     io.Reader
