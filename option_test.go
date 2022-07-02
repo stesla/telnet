@@ -82,12 +82,12 @@ func TestQMethodReceiveWILL(t *testing.T) {
 
 func TestQMethodReceiveWONT(t *testing.T) {
 	tests := []*qMethodTest{
-		//;&qMethodTest{start: telnetQNo, end: telnetQNo},
+		&qMethodTest{start: telnetQNo, end: telnetQNo},
 		&qMethodTest{start: telnetQYes, end: telnetQNo, expected: DONT},
-		//&qMethodTest{start: telnetQWantNoEmpty, end: telnetQNo},
+		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQNo},
 		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantYesEmpty, expected: DO},
-		//&qMethodTest{start: telnetQWantYesEmpty, end: telnetQNo},
-		//&qMethodTest{start: telnetQWantYesOpposite, end: telnetQNo},
+		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQNo},
+		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQNo},
 	}
 	for i, q := range tests {
 		o := newOption(SuppressGoAhead)
