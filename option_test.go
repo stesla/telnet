@@ -102,3 +102,111 @@ func TestQMethodReceiveWONT(t *testing.T) {
 
 	}
 }
+
+func TestQMethodAskEnableThem(t *testing.T) {
+	tests := []*qMethodTest{
+		&qMethodTest{start: telnetQNo, end: telnetQWantYesEmpty, expected: DO},
+		&qMethodTest{start: telnetQYes, end: telnetQYes},
+		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQWantNoOpposite},
+		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantNoOpposite},
+		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQWantYesEmpty},
+		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQWantYesEmpty},
+	}
+	for _, q := range tests {
+		o := newOption(SuppressGoAhead)
+		o.them = q.start
+		called := false
+		err := o.enableThem(func(p ...byte) error {
+			called = true
+			if q.expected != 0 {
+				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p)
+			}
+			return nil
+		})
+		if q.expected != 0 {
+			assert.True(t, called)
+		}
+		assert.NoError(t, err)
+	}
+}
+
+func TestQMethodDisableThem(t *testing.T) {
+	tests := []*qMethodTest{
+		&qMethodTest{start: telnetQNo, end: telnetQNo},
+		&qMethodTest{start: telnetQYes, end: telnetQWantNoEmpty, expected: DONT},
+		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQWantNoEmpty},
+		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantNoEmpty},
+		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQWantYesOpposite},
+		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQWantYesOpposite},
+	}
+	for _, q := range tests {
+		o := newOption(SuppressGoAhead)
+		o.them = q.start
+		called := false
+		err := o.disableThem(func(p ...byte) error {
+			called = true
+			if q.expected != 0 {
+				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p)
+			}
+			return nil
+		})
+		if q.expected != 0 {
+			assert.True(t, called)
+		}
+		assert.NoError(t, err)
+	}
+}
+
+func TestQMethodEnableUs(t *testing.T) {
+	tests := []*qMethodTest{
+		&qMethodTest{start: telnetQNo, end: telnetQWantYesEmpty, expected: WILL},
+		&qMethodTest{start: telnetQYes, end: telnetQYes},
+		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQWantNoOpposite},
+		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantNoOpposite},
+		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQWantYesEmpty},
+		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQWantYesEmpty},
+	}
+	for _, q := range tests {
+		o := newOption(SuppressGoAhead)
+		o.us = q.start
+		called := false
+		err := o.enableUs(func(p ...byte) error {
+			called = true
+			if q.expected != 0 {
+				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p)
+			}
+			return nil
+		})
+		if q.expected != 0 {
+			assert.True(t, called)
+		}
+		assert.NoError(t, err)
+	}
+}
+
+func TestQMethodDisableUs(t *testing.T) {
+	tests := []*qMethodTest{
+		&qMethodTest{start: telnetQNo, end: telnetQNo},
+		&qMethodTest{start: telnetQYes, end: telnetQWantNoEmpty, expected: WONT},
+		&qMethodTest{start: telnetQWantNoEmpty, end: telnetQWantNoEmpty},
+		&qMethodTest{start: telnetQWantNoOpposite, end: telnetQWantNoEmpty},
+		&qMethodTest{start: telnetQWantYesEmpty, end: telnetQWantYesOpposite},
+		&qMethodTest{start: telnetQWantYesOpposite, end: telnetQWantYesOpposite},
+	}
+	for _, q := range tests {
+		o := newOption(SuppressGoAhead)
+		o.us = q.start
+		called := false
+		err := o.disableUs(func(p ...byte) error {
+			called = true
+			if q.expected != 0 {
+				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p)
+			}
+			return nil
+		})
+		if q.expected != 0 {
+			assert.True(t, called)
+		}
+		assert.NoError(t, err)
+	}
+}
