@@ -59,6 +59,14 @@ func (o *option) disable(state *telnetQState, cmd byte, send sendfunc) error {
 	return nil
 }
 
+func (o *option) enabledForThem() bool {
+	return telnetQYes == o.them
+}
+
+func (o *option) enabledForUs() bool {
+	return telnetQYes == o.us
+}
+
 func (o *option) enableThem(send sendfunc) error {
 	return o.enable(&o.them, DO, send)
 }
