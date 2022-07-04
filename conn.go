@@ -9,10 +9,11 @@ type Conn interface {
 	io.Reader
 	io.Writer
 
-	AllowOptionForThem(option byte, allow bool)
-	AllowOptionForUs(option byte, allow bool)
+	AllowOption(handler OptionHandler, allowThem, allowUs bool)
 	EnableOptionForThem(option byte, enable bool) error
 	EnableOptionForUs(option byte, enable bool) error
+
+	SuppressGoAhead(enabled bool)
 }
 
 func Client(conn net.Conn) Conn {
@@ -36,6 +37,8 @@ type connection struct {
 	out    io.Writer
 	opts   *optionMap
 	rawOut io.Writer
+
+	suppressGoAhead bool
 }
 
 func newConnection(r io.Reader, w io.Writer) *connection {
@@ -47,14 +50,9 @@ func newConnection(r io.Reader, w io.Writer) *connection {
 	}
 }
 
-func (c *connection) AllowOptionForThem(option byte, allow bool) {
-	opt := c.opts.get(option)
-	opt.allowThem = allow
-}
-
-func (c *connection) AllowOptionForUs(option byte, allow bool) {
-	opt := c.opts.get(option)
-	opt.allowUs = allow
+func (c *connection) AllowOption(handler OptionHandler, allowThem, allowUs bool) {
+	opt := c.opts.get(handler.Option())
+	opt.OptionHandler, opt.allowThem, opt.allowUs = handler, allowThem, allowUs
 }
 
 func (c *connection) EnableOptionForThem(option byte, enable bool) error {
@@ -94,20 +92,28 @@ func (c *connection) Read(p []byte) (n int, err error) {
 		err = nil
 		opt := c.opts.get(byte(t.opt))
 		opt.receive(byte(t.cmd), func(cmd byte) {
+			if opt.OptionHandler != nil {
+				switch cmd {
+				case DO:
+					opt.Enable(c)
+				case DONT:
+					opt.Disable(c)
+				}
+			}
 			_, err = c.rawOut.Write([]byte{IAC, cmd, byte(t.opt)})
 		})
 	}
 	return
 }
 
+func (c *connection) SuppressGoAhead(enabled bool) {
+	c.suppressGoAhead = enabled
+}
+
 func (c *connection) Write(p []byte) (n int, err error) {
 	n, err = c.out.Write(p)
-	if err == nil && !c.suppressGoAhead() {
+	if err == nil && !c.suppressGoAhead {
 		_, err = c.rawOut.Write([]byte{IAC, GA})
 	}
 	return
-}
-
-func (c *connection) suppressGoAhead() bool {
-	return c.opts.get(SuppressGoAhead).enabledForUs()
 }

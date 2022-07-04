@@ -28,7 +28,7 @@ func TestWriteGoAhead(t *testing.T) {
 	assert.Equal(t, []byte{'f', 'o', 'o', IAC, GA}, out.Bytes())
 	out.Reset()
 
-	conn.opts.get(SuppressGoAhead).us = telnetQYes
+	conn.SuppressGoAhead(true)
 	n, err = conn.Write([]byte("foo"))
 	assert.NoError(t, err)
 	assert.Equal(t, 3, n)
@@ -42,8 +42,7 @@ func TestAllowOption(t *testing.T) {
 		IAC, DO, SuppressGoAhead,
 	})
 	conn := newConnection(in, &out)
-	conn.AllowOptionForThem(SuppressGoAhead, true)
-	conn.AllowOptionForUs(SuppressGoAhead, true)
+	conn.AllowOption(&SuppressGoAheadOption{}, true, true)
 
 	buf, err := ioutil.ReadAll(conn)
 	assert.NoError(t, err)
