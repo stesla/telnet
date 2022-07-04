@@ -36,8 +36,16 @@ func Server(conn net.Conn) Conn {
 	return newConnection(conn, conn)
 }
 
+type OptionHandler interface {
+	Option() byte
+	Enable(Conn)
+	Disable(Conn)
+	Subnegotiation(Conn, []byte)
+}
+
 type connection struct {
 	opts            *optionMap
+	handlers        map[byte]OptionHandler
 	r, in           io.Reader
 	w, out          io.Writer
 	suppressGoAhead bool
@@ -45,9 +53,10 @@ type connection struct {
 
 func newConnection(r io.Reader, w io.Writer) *connection {
 	conn := &connection{
-		opts: newOptionMap(),
-		r:    r,
-		w:    w,
+		opts:     newOptionMap(),
+		handlers: make(map[byte]OptionHandler),
+		r:        r,
+		w:        w,
 	}
 	conn.SetEncoding(ASCII)
 	return conn
@@ -55,7 +64,7 @@ func newConnection(r io.Reader, w io.Writer) *connection {
 
 func (c *connection) AllowOption(handler OptionHandler, allowThem, allowUs bool) {
 	opt := c.opts.get(handler.Option())
-	opt.OptionHandler, opt.allowThem, opt.allowUs = handler, allowThem, allowUs
+	c.handlers[opt.code], opt.allowThem, opt.allowUs = handler, allowThem, allowUs
 }
 
 func (c *connection) EnableOptionForThem(option byte, enable bool) error {
@@ -117,17 +126,21 @@ func (c *connection) handleCommand(cmd any) (err error) {
 		// do nothing
 	case *telnetOptionCommand:
 		opt := c.opts.get(byte(t.opt))
-		opt.receive(byte(t.cmd), func(cmd byte) {
-			if opt.OptionHandler != nil {
-				switch cmd {
-				case DO:
-					opt.Enable(c)
-				case DONT:
-					opt.Disable(c)
-				}
-			}
-			_, err = c.Send(IAC, cmd, byte(t.opt))
+		enabled := opt.enabledForUs()
+		opt.receive(t.cmd, func(cmd byte) {
+			_, err = c.Send(IAC, cmd, t.opt)
 		})
+		if handler, ok := c.handlers[opt.code]; ok {
+			if !enabled && opt.enabledForUs() {
+				handler.Enable(c)
+			} else if enabled && !opt.enabledForUs() {
+				handler.Disable(c)
+			}
+		}
+	case *telnetSubnegotiation:
+		if handler, ok := c.handlers[t.opt]; ok && len(t.bytes) > 0 {
+			handler.Subnegotiation(c, t.bytes)
+		}
 	}
 	return
 }

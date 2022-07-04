@@ -27,7 +27,7 @@ func TestSimple(t *testing.T) {
 		{[]byte{'h', IAC, IAC, 'i'}, []byte{'h', IAC, 'i'}},
 		{[]byte("foo\r\nbar"), []byte("foo\nbar")},
 		{[]byte("foo\r\x00bar"), []byte("foo\rbar")},
-		{[]byte{'h', IAC, SB, IAC, SE, 'i'}, []byte("hi")},
+		{[]byte{'h', IAC, SB, Echo, IAC, SE, 'i'}, []byte("hi")},
 	}
 	for _, test := range tests {
 		buf, err := readTest(test.in)
@@ -140,8 +140,8 @@ func TestTelnetCommand(t *testing.T) {
 		{[]byte{'h', IAC, DONT, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{DONT, Echo}},
 		{[]byte{'h', IAC, WILL, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{WILL, Echo}},
 		{[]byte{'h', IAC, WONT, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{WONT, Echo}},
-		{[]byte{'h', IAC, SB, 'f', 'o', 'o', IAC, SE, 'i'}, []byte("hi"), &telnetSubnegotiation{[]byte("foo")}},
-		{[]byte{'h', IAC, SB, IAC, IAC, IAC, SE, 'i'}, []byte("hi"), &telnetSubnegotiation{[]byte{IAC}}},
+		{[]byte{'h', IAC, SB, Echo, 'f', 'o', 'o', IAC, SE, 'i'}, []byte("hi"), &telnetSubnegotiation{Echo, []byte("foo")}},
+		{[]byte{'h', IAC, SB, Echo, IAC, IAC, IAC, SE, 'i'}, []byte("hi"), &telnetSubnegotiation{Echo, []byte{IAC}}},
 	}
 	for _, test := range tests {
 		var actual any

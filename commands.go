@@ -114,18 +114,18 @@ func (t telnetGoAhead) String() string {
 }
 
 type telnetOptionCommand struct {
-	cmd commandByte
-	opt optionByte
+	cmd, opt byte
 }
 
 func (t telnetOptionCommand) String() string {
-	return fmt.Sprintf("IAC %s %s", t.cmd, t.opt)
+	return fmt.Sprintf("IAC %s %s", commandByte(t.cmd), optionByte(t.opt))
 }
 
 type telnetSubnegotiation struct {
+	opt   byte
 	bytes []byte
 }
 
 func (t telnetSubnegotiation) String() string {
-	return fmt.Sprintf("IAC SB %q IAC SE", t.bytes)
+	return fmt.Sprintf("IAC SB %s %q IAC SE", optionByte(t.opt), t.bytes)
 }
