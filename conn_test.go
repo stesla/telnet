@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/text/encoding/unicode"
 )
 
 func TestReadGoAhead(t *testing.T) {
@@ -99,4 +100,38 @@ func TestNaiveOptions(t *testing.T) {
 		assert.Equal(t, test.expectedr, buf, "test %d", i)
 		assert.Equal(t, test.expectedw, out.Bytes(), "test %d", i)
 	}
+}
+
+func TestASCIIByDefault(t *testing.T) {
+	in := bytes.NewBuffer([]byte{'h', IAC, IAC, 'i'})
+	var out bytes.Buffer
+	conn := newConnection(in, &out)
+	conn.SuppressGoAhead(true)
+
+	buf, err := ioutil.ReadAll(conn)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("h\x1ai"), buf)
+	out.Reset()
+
+	n, err := conn.Write([]byte{'h', IAC, 'i'})
+	assert.NoError(t, err)
+	assert.Equal(t, 3, n)
+	assert.Equal(t, []byte("h\x1ai"), out.Bytes())
+}
+
+func TestSetReadEncoding(t *testing.T) {
+	in := bytes.NewBuffer([]byte{0xe2, 0x80, 0xbb})
+	var out bytes.Buffer
+	conn := newConnection(in, &out)
+	conn.SuppressGoAhead(true)
+	conn.SetEncoding(unicode.UTF8)
+
+	buf, err := ioutil.ReadAll(conn)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("※"), buf)
+
+	n, err := conn.Write([]byte("※"))
+	assert.NoError(t, err)
+	assert.Equal(t, 3, n)
+	assert.Equal(t, []byte("※"), out.Bytes())
 }

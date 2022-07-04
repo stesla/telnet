@@ -3,6 +3,8 @@ package telnet
 import (
 	"io"
 	"net"
+
+	"golang.org/x/text/encoding"
 )
 
 type Conn interface {
@@ -14,6 +16,7 @@ type Conn interface {
 	EnableOptionForUs(option byte, enable bool) error
 
 	Send(p ...byte) (n int, err error)
+	SetEncoding(encoding.Encoding)
 	SuppressGoAhead(enabled bool)
 }
 
@@ -34,21 +37,19 @@ func Server(conn net.Conn) Conn {
 }
 
 type connection struct {
-	in     io.Reader
-	out    io.Writer
-	opts   *optionMap
-	rawOut io.Writer
-
+	opts            *optionMap
+	r, in           io.Reader
+	w, out          io.Writer
 	suppressGoAhead bool
 }
 
 func newConnection(r io.Reader, w io.Writer) *connection {
 	conn := &connection{
-		opts:   newOptionMap(),
-		rawOut: w,
+		opts: newOptionMap(),
+		r:    r,
+		w:    w,
 	}
-	conn.in = NewReader(r, conn.handleCommand)
-	conn.out = NewWriter(w)
+	conn.SetEncoding(ASCII)
 	return conn
 }
 
@@ -90,7 +91,12 @@ func (c *connection) Read(p []byte) (n int, err error) {
 }
 
 func (c *connection) Send(p ...byte) (int, error) {
-	return c.rawOut.Write(p)
+	return c.w.Write(p)
+}
+
+func (c *connection) SetEncoding(enc encoding.Encoding) {
+	c.in = enc.NewDecoder().Reader(NewReader(c.r, c.handleCommand))
+	c.out = enc.NewEncoder().Writer(NewWriter(c.w))
 }
 
 func (c *connection) SuppressGoAhead(enabled bool) {
