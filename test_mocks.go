@@ -90,22 +90,18 @@ func (mr *MockConnMockRecorder) Read(arg0 interface{}) *gomock.Call {
 }
 
 // Send mocks base method.
-func (m *MockConn) Send(arg0 ...byte) (int, error) {
+func (m *MockConn) Send(arg0 []byte) (int, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Send", varargs...)
+	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Send indicates an expected call of Send.
-func (mr *MockConnMockRecorder) Send(arg0 ...interface{}) *gomock.Call {
+func (mr *MockConnMockRecorder) Send(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockConn)(nil).Send), arg0...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockConn)(nil).Send), arg0)
 }
 
 // SetEncoding mocks base method.

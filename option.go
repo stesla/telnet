@@ -43,7 +43,7 @@ func newOption(c byte) *option {
 	return &option{code: c}
 }
 
-type sendfunc func(p ...byte) error
+type sendfunc func(p []byte) error
 
 func (o *option) disableThem(send sendfunc) error {
 	return o.disable(&o.them, DONT, send)
@@ -59,7 +59,7 @@ func (o *option) disable(state *telnetQState, cmd byte, send sendfunc) error {
 		// ignore
 	case telnetQYes:
 		*state = telnetQWantNoEmpty
-		return send(IAC, cmd, o.code)
+		return send([]byte{IAC, cmd, o.code})
 	case telnetQWantNoEmpty:
 		// ignore
 	case telnetQWantNoOpposite:
@@ -92,7 +92,7 @@ func (o *option) enable(state *telnetQState, cmd byte, send sendfunc) error {
 	switch *state {
 	case telnetQNo:
 		*state = telnetQWantYesEmpty
-		return send(IAC, cmd, o.code)
+		return send([]byte{IAC, cmd, o.code})
 	case telnetQYes:
 		// ignore
 	case telnetQWantNoEmpty:
@@ -107,27 +107,28 @@ func (o *option) enable(state *telnetQState, cmd byte, send sendfunc) error {
 	return nil
 }
 
-func (o *option) receive(c byte, fn func(byte)) {
+func (o *option) receive(c byte, send sendfunc) error {
 	switch c {
 	case DO:
-		o.receiveEnableRequest(&o.us, o.allowUs, WILL, WONT, fn)
+		return o.receiveEnableRequest(&o.us, o.allowUs, WILL, WONT, send)
 	case DONT:
-		o.receiveDisableDemand(&o.us, WILL, WONT, fn)
+		return o.receiveDisableDemand(&o.us, WILL, WONT, send)
 	case WILL:
-		o.receiveEnableRequest(&o.them, o.allowThem, DO, DONT, fn)
+		return o.receiveEnableRequest(&o.them, o.allowThem, DO, DONT, send)
 	case WONT:
-		o.receiveDisableDemand(&o.them, DO, DONT, fn)
+		return o.receiveDisableDemand(&o.them, DO, DONT, send)
 	}
+	return nil
 }
 
-func (o *option) receiveEnableRequest(state *telnetQState, allowed bool, accept, reject byte, fn func(byte)) {
+func (o *option) receiveEnableRequest(state *telnetQState, allowed bool, accept, reject byte, send sendfunc) error {
 	switch *state {
 	case telnetQNo:
 		if allowed {
 			*state = telnetQYes
-			fn(accept)
+			return send([]byte{IAC, accept, o.code})
 		} else {
-			fn(reject)
+			return send([]byte{IAC, reject, o.code})
 		}
 	case telnetQYes:
 		// ignore
@@ -139,27 +140,29 @@ func (o *option) receiveEnableRequest(state *telnetQState, allowed bool, accept,
 		*state = telnetQYes
 	case telnetQWantYesOpposite:
 		*state = telnetQWantNoEmpty
-		fn(reject)
+		return send([]byte{IAC, reject, o.code})
 	}
+	return nil
 }
 
-func (o *option) receiveDisableDemand(state *telnetQState, accept, reject byte, fn func(byte)) {
+func (o *option) receiveDisableDemand(state *telnetQState, accept, reject byte, send sendfunc) error {
 	switch *state {
 	case telnetQNo:
 		// ignore
 	case telnetQYes:
 		*state = telnetQNo
-		fn(reject)
+		return send([]byte{IAC, reject, o.code})
 	case telnetQWantNoEmpty:
 		*state = telnetQNo
 	case telnetQWantNoOpposite:
 		*state = telnetQWantYesEmpty
-		fn(accept)
+		return send([]byte{IAC, accept, o.code})
 	case telnetQWantYesEmpty:
 		*state = telnetQNo
 	case telnetQWantYesOpposite:
 		*state = telnetQNo
 	}
+	return nil
 }
 
 type telnetQState int
