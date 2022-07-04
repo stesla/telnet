@@ -2,15 +2,17 @@ package telnet
 
 type SuppressGoAheadOption struct{}
 
-func (_ SuppressGoAheadOption) Option() byte { return SuppressGoAhead }
+func (SuppressGoAheadOption) Option() byte { return SuppressGoAhead }
 
-func (_ SuppressGoAheadOption) Enable(conn Conn) {
+func (SuppressGoAheadOption) Enable(conn Conn) {
 	conn.SuppressGoAhead(true)
 }
 
-func (_ SuppressGoAheadOption) Disable(conn Conn) {
+func (SuppressGoAheadOption) Disable(conn Conn) {
 	conn.SuppressGoAhead(false)
 }
+
+func (SuppressGoAheadOption) Subnegotiation(Conn, []byte) {}
 
 func newOptionMap() *optionMap {
 	return &optionMap{
