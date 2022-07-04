@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
+	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/text/encoding/unicode"
 )
@@ -35,23 +36,30 @@ func TestWriteGoAhead(t *testing.T) {
 }
 
 func TestAllowOption(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	var out bytes.Buffer
 	in := bytes.NewBuffer([]byte{
-		IAC, WILL, SuppressGoAhead,
-		IAC, DO, SuppressGoAhead,
+		IAC, WILL, Echo,
+		IAC, DO, Echo,
 	})
 	conn := newConnection(in, &out)
-	conn.AllowOption(&SuppressGoAheadOption{}, true, true)
 
+	handler := NewMockOptionHandler(ctrl)
+	handler.EXPECT().Option().Return(byte(Echo))
+	conn.AllowOption(handler, true, true)
+
+	handler.EXPECT().Enable(conn)
 	buf, err := ioutil.ReadAll(conn)
 	assert.NoError(t, err)
 	assert.Empty(t, buf)
 	assert.Equal(t, []byte{
-		IAC, DO, SuppressGoAhead,
-		IAC, WILL, SuppressGoAhead,
+		IAC, DO, Echo,
+		IAC, WILL, Echo,
 	}, out.Bytes())
 
-	opt := conn.opts.get(SuppressGoAhead)
+	opt := conn.opts.get(Echo)
 	assert.True(t, opt.enabledForThem())
 	assert.True(t, opt.enabledForUs())
 }
@@ -60,23 +68,23 @@ func TestEnableOption(t *testing.T) {
 	var out bytes.Buffer
 	conn := newConnection(nil, &out)
 
-	conn.EnableOptionForThem(SuppressGoAhead, true)
-	conn.EnableOptionForUs(SuppressGoAhead, true)
+	conn.EnableOptionForThem(Echo, true)
+	conn.EnableOptionForUs(Echo, true)
 	assert.Equal(t, []byte{
-		IAC, DO, SuppressGoAhead,
-		IAC, WILL, SuppressGoAhead,
+		IAC, DO, Echo,
+		IAC, WILL, Echo,
 	}, out.Bytes())
 	out.Reset()
 
-	opt := conn.opts.get(SuppressGoAhead)
+	opt := conn.opts.get(Echo)
 	opt.them = telnetQYes
 	opt.us = telnetQYes
 
-	conn.EnableOptionForThem(SuppressGoAhead, false)
-	conn.EnableOptionForUs(SuppressGoAhead, false)
+	conn.EnableOptionForThem(Echo, false)
+	conn.EnableOptionForUs(Echo, false)
 	assert.Equal(t, []byte{
-		IAC, DONT, SuppressGoAhead,
-		IAC, WONT, SuppressGoAhead,
+		IAC, DONT, Echo,
+		IAC, WONT, Echo,
 	}, out.Bytes())
 	out.Reset()
 }
