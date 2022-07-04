@@ -43,12 +43,13 @@ type connection struct {
 }
 
 func newConnection(r io.Reader, w io.Writer) *connection {
-	return &connection{
-		in:     NewReader(r),
+	conn := &connection{
 		opts:   newOptionMap(),
-		out:    NewWriter(w),
 		rawOut: w,
 	}
+	conn.in = NewReader(r, conn.handleCommand)
+	conn.out = NewWriter(w)
+	return conn
 }
 
 func (c *connection) AllowOption(handler OptionHandler, allowThem, allowUs bool) {
@@ -85,26 +86,7 @@ func (c *connection) EnableOptionForUs(option byte, enable bool) error {
 }
 
 func (c *connection) Read(p []byte) (n int, err error) {
-	n, err = c.in.Read(p)
-	switch t := err.(type) {
-	case *telnetGoAhead:
-		err = nil
-	case *telnetOptionCommand:
-		err = nil
-		opt := c.opts.get(byte(t.opt))
-		opt.receive(byte(t.cmd), func(cmd byte) {
-			if opt.OptionHandler != nil {
-				switch cmd {
-				case DO:
-					opt.Enable(c)
-				case DONT:
-					opt.Disable(c)
-				}
-			}
-			_, err = c.Send(IAC, cmd, byte(t.opt))
-		})
-	}
-	return
+	return c.in.Read(p)
 }
 
 func (c *connection) Send(p ...byte) (int, error) {
@@ -119,6 +101,27 @@ func (c *connection) Write(p []byte) (n int, err error) {
 	n, err = c.out.Write(p)
 	if err == nil && !c.suppressGoAhead {
 		_, err = c.Send(IAC, GA)
+	}
+	return
+}
+
+func (c *connection) handleCommand(cmd any) (err error) {
+	switch t := cmd.(type) {
+	case *telnetGoAhead:
+		// do nothing
+	case *telnetOptionCommand:
+		opt := c.opts.get(byte(t.opt))
+		opt.receive(byte(t.cmd), func(cmd byte) {
+			if opt.OptionHandler != nil {
+				switch cmd {
+				case DO:
+					opt.Enable(c)
+				case DONT:
+					opt.Disable(c)
+				}
+			}
+			_, err = c.Send(IAC, cmd, byte(t.opt))
+		})
 	}
 	return
 }

@@ -109,7 +109,7 @@ func (c charsetByte) String() string {
 
 type telnetGoAhead struct{}
 
-func (t telnetGoAhead) Error() string {
+func (t telnetGoAhead) String() string {
 	return "IAC GA"
 }
 
@@ -118,7 +118,7 @@ type telnetOptionCommand struct {
 	opt optionByte
 }
 
-func (t telnetOptionCommand) Error() string {
+func (t telnetOptionCommand) String() string {
 	return fmt.Sprintf("IAC %s %s", t.cmd, t.opt)
 }
 
@@ -126,6 +126,6 @@ type telnetSubnegotiation struct {
 	bytes []byte
 }
 
-func (t telnetSubnegotiation) Error() string {
+func (t telnetSubnegotiation) String() string {
 	return fmt.Sprintf("IAC SB %q IAC SE", t.bytes)
 }
