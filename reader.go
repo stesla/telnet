@@ -62,7 +62,7 @@ func (r *reader) decodeCommand(c byte) (readerState, byte, bool, error) {
 		err := r.handleCommand(&telnetGoAhead{})
 		return r.decodeByte, c, false, err
 	case SB:
-		return r.decodeSubnegotiation(), c, false, nil
+		return r.decodeSubnegotiation, c, false, nil
 	default:
 		return r.decodeByte, c, false, nil
 	}
@@ -81,14 +81,14 @@ func (r *reader) decodeCarriageReturn(c byte) (readerState, byte, bool, error) {
 
 func (r *reader) decodeOption(cmd byte) readerState {
 	return func(c byte) (readerState, byte, bool, error) {
-		err := r.handleCommand(&telnetOptionCommand{commandByte(cmd), optionByte(c)})
+		err := r.handleCommand(&telnetOptionCommand{cmd, c})
 		return r.decodeByte, c, false, err
 	}
 }
 
 const subnegotiationBufferSize = 256
 
-func (r *reader) decodeSubnegotiation() readerState {
+func (r *reader) decodeSubnegotiation(option byte) (readerState, byte, bool, error) {
 	var buf = make([]byte, 0, subnegotiationBufferSize)
 
 	var readByte, seenIAC readerState
@@ -111,7 +111,7 @@ func (r *reader) decodeSubnegotiation() readerState {
 		case SE:
 			var err error
 			if len(buf) > 0 {
-				err = r.handleCommand(&telnetSubnegotiation{buf})
+				err = r.handleCommand(&telnetSubnegotiation{option, buf})
 			}
 			return r.decodeByte, c, false, err
 		default:
@@ -120,7 +120,7 @@ func (r *reader) decodeSubnegotiation() readerState {
 		}
 	}
 
-	return readByte
+	return readByte, option, false, nil
 }
 
 func (r *reader) handleCommand(cmd any) (err error) {

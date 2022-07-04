@@ -35,33 +35,54 @@ func TestWriteGoAhead(t *testing.T) {
 	assert.Equal(t, []byte("foo"), out.Bytes())
 }
 
-func TestAllowOption(t *testing.T) {
+func TestOptionHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	var out bytes.Buffer
 	in := bytes.NewBuffer([]byte{
+		'h',
 		IAC, WILL, Echo,
 		IAC, DO, Echo,
+		'i',
 	})
 	conn := newConnection(in, &out)
 
 	handler := NewMockOptionHandler(ctrl)
 	handler.EXPECT().Option().Return(byte(Echo))
 	conn.AllowOption(handler, true, true)
+	opt := conn.opts.get(Echo)
 
+	buf := make([]byte, 8)
 	handler.EXPECT().Enable(conn)
-	buf, err := ioutil.ReadAll(conn)
+	n, err := conn.Read(buf)
 	assert.NoError(t, err)
-	assert.Empty(t, buf)
+	assert.Equal(t, []byte("hi"), buf[:n])
 	assert.Equal(t, []byte{
 		IAC, DO, Echo,
 		IAC, WILL, Echo,
 	}, out.Bytes())
-
-	opt := conn.opts.get(Echo)
 	assert.True(t, opt.enabledForThem())
 	assert.True(t, opt.enabledForUs())
+
+	buf = make([]byte, 8)
+	in.Write([]byte{
+		'h',
+		IAC, WONT, Echo,
+		IAC, DONT, Echo,
+		'i',
+	})
+	out.Reset()
+	handler.EXPECT().Disable(conn)
+	n, err = conn.Read(buf)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("hi"), buf[:n])
+	assert.Equal(t, []byte{
+		IAC, DONT, Echo,
+		IAC, WONT, Echo,
+	}, out.Bytes())
+	assert.False(t, opt.enabledForThem())
+	assert.False(t, opt.enabledForUs())
 }
 
 func TestEnableOption(t *testing.T) {
@@ -142,4 +163,23 @@ func TestSetReadEncoding(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 3, n)
 	assert.Equal(t, []byte("※"), out.Bytes())
+}
+
+func TestSubnegotiation(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	in := bytes.NewBuffer([]byte{IAC, SB, Echo, 'h', 'i', IAC, SE})
+	conn := newConnection(in, nil)
+
+	handler := NewMockOptionHandler(ctrl)
+	handler.EXPECT().Option().Return(byte(Echo))
+	conn.AllowOption(handler, true, true)
+	opt := conn.opts.get(Echo)
+	opt.them, opt.us = telnetQYes, telnetQYes
+
+	handler.EXPECT().Subnegotiation(conn, []byte("hi"))
+	buf, err := ioutil.ReadAll(conn)
+	assert.NoError(t, err)
+	assert.Empty(t, buf)
 }

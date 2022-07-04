@@ -1,11 +1,5 @@
 package telnet
 
-type OptionHandler interface {
-	Option() byte
-	Enable(Conn)
-	Disable(Conn)
-}
-
 type SuppressGoAheadOption struct{}
 
 func (_ SuppressGoAheadOption) Option() byte { return SuppressGoAhead }
@@ -38,12 +32,9 @@ func (m *optionMap) get(c byte) (opt *option) {
 }
 
 type option struct {
-	code byte
-
+	code               byte
 	allowUs, allowThem bool
 	us, them           telnetQState
-
-	OptionHandler
 }
 
 func newOption(c byte) *option {
