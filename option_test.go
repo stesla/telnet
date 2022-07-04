@@ -65,9 +65,10 @@ func TestQMethodReceive(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %v", commandByte(q.receive), q.start, q.permitted)
 		*q.state, *q.allow = q.start, q.permitted
 		var called bool
-		o.receive(q.receive, func(c byte) {
+		o.receive(q.receive, func(p []byte) error {
 			called = true
-			assert.Equal(t, q.expected, c, testMsg)
+			assert.Equal(t, []byte{IAC, q.expected, o.code}, p, testMsg)
+			return nil
 		})
 		assert.Equal(t, q.expected != 0, called, testMsg)
 		assert.Equal(t, q.end, *q.state, testMsg)
@@ -121,7 +122,7 @@ func TestQMethodEnableOrDisable(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %s", action, who, q.start)
 		*q.state = q.start
 		called := false
-		err := q.fn(func(p ...byte) error {
+		err := q.fn(func(p []byte) error {
 			called = true
 			if q.expected != 0 {
 				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p, testMsg)
@@ -136,7 +137,7 @@ func TestQMethodEnableOrDisable(t *testing.T) {
 }
 
 func TestSuppresGoAhead(t *testing.T) {
-	var h OptionHandler = SuppressGoAheadOption{}
+	var h OptionHandler = &SuppressGoAheadOption{}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)

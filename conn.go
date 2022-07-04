@@ -15,7 +15,7 @@ type Conn interface {
 	EnableOptionForThem(option byte, enable bool) error
 	EnableOptionForUs(option byte, enable bool) error
 
-	Send(p ...byte) (n int, err error)
+	Send(p []byte) (n int, err error)
 	SetEncoding(encoding.Encoding)
 	SuppressGoAhead(enabled bool)
 }
@@ -75,8 +75,8 @@ func (c *connection) EnableOptionForThem(option byte, enable bool) error {
 	} else {
 		fn = opt.disableThem
 	}
-	return fn(func(p ...byte) (err error) {
-		_, err = c.Send(p...)
+	return fn(func(p []byte) (err error) {
+		_, err = c.Send(p)
 		return
 	})
 }
@@ -89,8 +89,8 @@ func (c *connection) EnableOptionForUs(option byte, enable bool) error {
 	} else {
 		fn = opt.disableUs
 	}
-	return fn(func(p ...byte) (err error) {
-		_, err = c.Send(p...)
+	return fn(func(p []byte) (err error) {
+		_, err = c.Send(p)
 		return
 	})
 }
@@ -99,7 +99,7 @@ func (c *connection) Read(p []byte) (n int, err error) {
 	return c.in.Read(p)
 }
 
-func (c *connection) Send(p ...byte) (int, error) {
+func (c *connection) Send(p []byte) (int, error) {
 	return c.w.Write(p)
 }
 
@@ -115,7 +115,7 @@ func (c *connection) SuppressGoAhead(enabled bool) {
 func (c *connection) Write(p []byte) (n int, err error) {
 	n, err = c.out.Write(p)
 	if err == nil && !c.suppressGoAhead {
-		_, err = c.Send(IAC, GA)
+		_, err = c.Send([]byte{IAC, GA})
 	}
 	return
 }
@@ -127,8 +127,9 @@ func (c *connection) handleCommand(cmd any) (err error) {
 	case *telnetOptionCommand:
 		opt := c.opts.get(byte(t.opt))
 		enabled := opt.enabledForUs()
-		opt.receive(t.cmd, func(cmd byte) {
-			_, err = c.Send(IAC, cmd, t.opt)
+		err = opt.receive(t.cmd, func(p []byte) (err error) {
+			_, err = c.Send(p)
+			return
 		})
 		if handler, ok := c.handlers[opt.code]; ok {
 			if !enabled && opt.enabledForUs() {
