@@ -3,6 +3,7 @@ package telnet
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 )
 
 func readTest(in []byte) (out []byte, err error) {
-	r := NewReader(bytes.NewBuffer(in))
+	r := NewReader(bytes.NewBuffer(in), nil)
 	out = make([]byte, 16)
 	n, err := r.Read(out)
 	out = out[:n]
@@ -69,7 +70,7 @@ func TestSplitInput(t *testing.T) {
 	}
 	for _, test := range tests {
 		in := bytes.NewBuffer(test.in1)
-		r := NewReader(in)
+		r := NewReader(in, nil)
 		buf := make([]byte, 16)
 		n1, err := r.Read(buf)
 		assert.NoError(t, err)
@@ -92,7 +93,7 @@ func (r boomReader) Read(b []byte) (n int, err error) {
 }
 
 func TestErrorReading(t *testing.T) {
-	r := NewReader(boomReader(3))
+	r := NewReader(boomReader(3), nil)
 	buf := make([]byte, 16)
 	n, err := r.Read(buf)
 	buf = buf[:n]
@@ -101,7 +102,7 @@ func TestErrorReading(t *testing.T) {
 }
 
 func TestEOFOnSeparateRead(t *testing.T) {
-	r := NewReader(bytes.NewBufferString("hi"))
+	r := NewReader(bytes.NewBufferString("hi"), nil)
 	buf := make([]byte, 16)
 	n, err := r.Read(buf)
 	assert.NoError(t, err)
@@ -111,10 +112,28 @@ func TestEOFOnSeparateRead(t *testing.T) {
 	assert.Equal(t, 0, n)
 }
 
+func TestNilCommandHandler(t *testing.T) {
+	r := NewReader(bytes.NewBuffer([]byte{'h', IAC, GA, 'i'}), nil)
+	buf := make([]byte, 16)
+	n, err := r.Read(buf)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("hi"), buf[:n])
+}
+
+func TestErrorInCommandHandler(t *testing.T) {
+	r := NewReader(bytes.NewBuffer([]byte{'h', IAC, GA, 'i'}), func(any) error {
+		return errors.New("boom")
+	})
+	buf := make([]byte, 16)
+	n, err := r.Read(buf)
+	assert.Error(t, err)
+	assert.Equal(t, []byte("h"), buf[:n])
+}
+
 func TestTelnetCommand(t *testing.T) {
 	var tests = []struct {
 		in, expected []byte
-		err          error
+		cmd          fmt.Stringer
 	}{
 		{[]byte{'h', IAC, GA, 'i'}, []byte("hi"), &telnetGoAhead{}},
 		{[]byte{'h', IAC, DO, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{DO, Echo}},
@@ -125,14 +144,22 @@ func TestTelnetCommand(t *testing.T) {
 		{[]byte{'h', IAC, SB, IAC, IAC, IAC, SE, 'i'}, []byte("hi"), &telnetSubnegotiation{[]byte{IAC}}},
 	}
 	for _, test := range tests {
-		r := NewReader(bytes.NewBuffer(test.in))
+		var actual any
+		r := NewReader(bytes.NewBuffer(test.in), func(cmd any) error {
+			actual = cmd
+			return nil
+		})
 		buf := make([]byte, 16)
-		n1, err := r.Read(buf)
-		if assert.Error(t, err, "%v", test.err) {
-			assert.Equal(t, test.err, err, "%v", test.err)
-		}
-		n2, err := r.Read(buf[n1:])
-		assert.NoError(t, err, "%v", test.err)
-		assert.Equal(t, test.expected, buf[:n1+n2], "%v", test.err)
+		n, err := r.Read(buf)
+		assert.NoError(t, err, test.cmd.String())
+		assert.Equal(t, test.expected, buf[:n], test.cmd.String())
+		assert.Equal(t, test.cmd, actual, test.cmd.String())
+
+		r = NewReader(bytes.NewBuffer(test.in), func(cmd any) error {
+			return errors.New("boom")
+		})
+		n, err = r.Read(buf)
+		assert.Error(t, err, test.cmd.String())
+		assert.Equal(t, test.expected[:1], buf[:n], test.cmd.String())
 	}
 }

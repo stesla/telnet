@@ -1,12 +1,11 @@
 package telnet
 
 import (
-	"fmt"
 	"io"
 )
 
-func NewReader(r io.Reader) io.Reader {
-	result := &reader{in: r}
+func NewReader(r io.Reader, fn func(any) error) io.Reader {
+	result := &reader{in: r, cmdfn: fn}
 	result.state = result.decodeByte
 	return result
 }
@@ -15,15 +14,10 @@ type reader struct {
 	in     io.Reader
 	b, buf []byte
 	state  readerState
+	cmdfn  func(any) error
 }
 
-type readerState func(byte) readerStateTransition
-type readerStateTransition struct {
-	state readerState
-	c     byte
-	ok    bool
-	err   error
-}
+type readerState func(byte) (readerState, byte, bool, error)
 
 func (r *reader) Read(p []byte) (n int, err error) {
 	if len(r.b) == 0 {
@@ -33,61 +27,62 @@ func (r *reader) Read(p []byte) (n int, err error) {
 		r.b = r.b[:n]
 	}
 	for len(r.b) > 0 && n < len(p) {
-		t := r.state(r.b[0])
+		state, c, ok, err := r.state(r.b[0])
 		r.b = r.b[1:]
-		r.state = t.state
-		if t.ok {
-			p[n] = t.c
+		r.state = state
+		if ok {
+			p[n] = c
 			n++
 		}
-		if t.err != nil {
-			return n, t.err
+		if err != nil {
+			return n, err
 		}
 	}
 	return
 }
 
-func (r *reader) decodeByte(c byte) readerStateTransition {
+func (r *reader) decodeByte(c byte) (readerState, byte, bool, error) {
 	switch c {
 	case IAC:
-		return readerStateTransition{state: r.decodeCommand, c: c, ok: false}
+		return r.decodeCommand, c, false, nil
 	case '\r':
-		return readerStateTransition{state: r.decodeCarriageReturn, c: c, ok: false}
+		return r.decodeCarriageReturn, c, false, nil
 	default:
-		return readerStateTransition{state: r.decodeByte, c: c, ok: true}
+		return r.decodeByte, c, true, nil
 	}
 }
 
-func (r *reader) decodeCommand(c byte) readerStateTransition {
+func (r *reader) decodeCommand(c byte) (readerState, byte, bool, error) {
 	switch c {
 	case IAC:
-		return readerStateTransition{state: r.decodeByte, c: c, ok: true}
+		return r.decodeByte, c, true, nil
 	case DO, DONT, WILL, WONT:
-		return readerStateTransition{state: r.decodeOption(c), c: c, ok: false}
+		return r.decodeOption(c), c, false, nil
 	case GA:
-		return readerStateTransition{state: r.decodeByte, c: c, ok: false, err: &telnetGoAhead{}}
+		err := r.handleCommand(&telnetGoAhead{})
+		return r.decodeByte, c, false, err
 	case SB:
-		return readerStateTransition{state: r.decodeSubnegotiation(), c: c, ok: false}
+		return r.decodeSubnegotiation(), c, false, nil
 	default:
-		return readerStateTransition{state: r.decodeByte, c: c, ok: false}
+		return r.decodeByte, c, false, nil
 	}
 }
 
-func (r *reader) decodeCarriageReturn(c byte) readerStateTransition {
+func (r *reader) decodeCarriageReturn(c byte) (readerState, byte, bool, error) {
 	switch c {
 	case '\x00':
-		return readerStateTransition{state: r.decodeByte, c: '\r', ok: true}
+		return r.decodeByte, '\r', true, nil
 	case '\r':
-		return readerStateTransition{state: r.decodeByte, c: c, ok: false}
+		return r.decodeByte, c, false, nil
 	default:
-		return readerStateTransition{state: r.decodeByte, c: c, ok: true}
+		return r.decodeByte, c, true, nil
 	}
 }
 
 func (r *reader) decodeOption(cmd byte) readerState {
-	return func(c byte) readerStateTransition {
-		err := &telnetOptionCommand{commandByte(cmd), optionByte(c)}
-		return readerStateTransition{state: r.decodeByte, c: c, ok: false, err: err}
+	return func(c byte) (readerState, byte, bool, error) {
+		err := r.handleCommand(&telnetOptionCommand{commandByte(cmd), optionByte(c)})
+		return r.decodeByte, c, false, err
 	}
 }
 
@@ -98,32 +93,39 @@ func (r *reader) decodeSubnegotiation() readerState {
 
 	var readByte, seenIAC readerState
 
-	readByte = func(c byte) readerStateTransition {
+	readByte = func(c byte) (readerState, byte, bool, error) {
 		switch c {
 		case IAC:
-			return readerStateTransition{state: seenIAC, c: c, ok: false}
+			return seenIAC, c, false, nil
 		default:
 			buf = append(buf, c)
-			return readerStateTransition{state: readByte, c: c, ok: false}
+			return readByte, c, false, nil
 		}
 	}
 
-	seenIAC = func(c byte) readerStateTransition {
+	seenIAC = func(c byte) (readerState, byte, bool, error) {
 		switch c {
 		case IAC:
 			buf = append(buf, c)
-			return readerStateTransition{state: readByte, c: c, ok: false}
+			return readByte, c, false, nil
 		case SE:
 			var err error
 			if len(buf) > 0 {
-				err = &telnetSubnegotiation{buf}
+				err = r.handleCommand(&telnetSubnegotiation{buf})
 			}
-			return readerStateTransition{state: r.decodeByte, c: c, ok: false, err: err}
+			return r.decodeByte, c, false, err
 		default:
-			err := fmt.Errorf("IAC %b", commandByte(c))
-			return readerStateTransition{state: r.decodeByte, c: c, ok: false, err: err}
+			r.handleCommand(c)
+			return r.decodeByte, c, false, nil
 		}
 	}
 
 	return readByte
+}
+
+func (r *reader) handleCommand(cmd any) (err error) {
+	if r.cmdfn != nil {
+		err = r.cmdfn(cmd)
+	}
+	return
 }

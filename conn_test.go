@@ -12,11 +12,9 @@ func TestReadGoAhead(t *testing.T) {
 	in := bytes.NewBuffer([]byte{'h', IAC, GA, 'i'})
 	conn := newConnection(in, nil)
 	buf := make([]byte, 8)
-	n1, err := conn.Read(buf)
+	n, err := conn.Read(buf)
 	assert.NoError(t, err)
-	n2, err := conn.Read(buf[n1:])
-	assert.NoError(t, err)
-	assert.Equal(t, []byte("hi"), buf[:n1+n2])
+	assert.Equal(t, []byte("hi"), buf[:n])
 }
 
 func TestWriteGoAhead(t *testing.T) {
