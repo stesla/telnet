@@ -13,6 +13,7 @@ type Conn interface {
 	EnableOptionForThem(option byte, enable bool) error
 	EnableOptionForUs(option byte, enable bool) error
 
+	Send(p ...byte) (n int, err error)
 	SuppressGoAhead(enabled bool)
 }
 
@@ -64,7 +65,7 @@ func (c *connection) EnableOptionForThem(option byte, enable bool) error {
 		fn = opt.disableThem
 	}
 	return fn(func(p ...byte) (err error) {
-		_, err = c.rawOut.Write(p)
+		_, err = c.Send(p...)
 		return
 	})
 }
@@ -78,7 +79,7 @@ func (c *connection) EnableOptionForUs(option byte, enable bool) error {
 		fn = opt.disableUs
 	}
 	return fn(func(p ...byte) (err error) {
-		_, err = c.rawOut.Write(p)
+		_, err = c.Send(p...)
 		return
 	})
 }
@@ -100,10 +101,14 @@ func (c *connection) Read(p []byte) (n int, err error) {
 					opt.Disable(c)
 				}
 			}
-			_, err = c.rawOut.Write([]byte{IAC, cmd, byte(t.opt)})
+			_, err = c.Send(IAC, cmd, byte(t.opt))
 		})
 	}
 	return
+}
+
+func (c *connection) Send(p ...byte) (int, error) {
+	return c.rawOut.Write(p)
 }
 
 func (c *connection) SuppressGoAhead(enabled bool) {
@@ -113,7 +118,7 @@ func (c *connection) SuppressGoAhead(enabled bool) {
 func (c *connection) Write(p []byte) (n int, err error) {
 	n, err = c.out.Write(p)
 	if err == nil && !c.suppressGoAhead {
-		_, err = c.rawOut.Write([]byte{IAC, GA})
+		_, err = c.Send(IAC, GA)
 	}
 	return
 }
