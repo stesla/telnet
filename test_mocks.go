@@ -74,6 +74,21 @@ func (mr *MockConnMockRecorder) EnableOptionForUs(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableOptionForUs", reflect.TypeOf((*MockConn)(nil).EnableOptionForUs), arg0, arg1)
 }
 
+// OptionEnabled mocks base method.
+func (m *MockConn) OptionEnabled(arg0 byte) (bool, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OptionEnabled", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// OptionEnabled indicates an expected call of OptionEnabled.
+func (mr *MockConnMockRecorder) OptionEnabled(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OptionEnabled", reflect.TypeOf((*MockConn)(nil).OptionEnabled), arg0)
+}
+
 // Read mocks base method.
 func (m *MockConn) Read(arg0 []byte) (int, error) {
 	m.ctrl.T.Helper()

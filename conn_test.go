@@ -51,7 +51,6 @@ func TestOptionHandler(t *testing.T) {
 	handler := NewMockOptionHandler(ctrl)
 	handler.EXPECT().Option().Return(byte(Echo))
 	conn.AllowOption(handler, true, true)
-	opt := conn.opts.get(Echo)
 
 	buf := make([]byte, 8)
 	handler.EXPECT().Enable(conn)
@@ -62,8 +61,9 @@ func TestOptionHandler(t *testing.T) {
 		IAC, DO, Echo,
 		IAC, WILL, Echo,
 	}, out.Bytes())
-	assert.True(t, opt.enabledForThem())
-	assert.True(t, opt.enabledForUs())
+	them, us := conn.OptionEnabled(Echo)
+	assert.True(t, them)
+	assert.True(t, us)
 
 	buf = make([]byte, 8)
 	in.Write([]byte{
@@ -81,8 +81,9 @@ func TestOptionHandler(t *testing.T) {
 		IAC, DONT, Echo,
 		IAC, WONT, Echo,
 	}, out.Bytes())
-	assert.False(t, opt.enabledForThem())
-	assert.False(t, opt.enabledForUs())
+	them, us = conn.OptionEnabled(Echo)
+	assert.False(t, them)
+	assert.False(t, us)
 }
 
 func TestEnableOption(t *testing.T) {
