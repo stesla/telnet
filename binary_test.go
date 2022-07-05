@@ -25,9 +25,16 @@ func TestTransmitBinaryOption(t *testing.T) {
 	defer ctrl.Finish()
 
 	conn := NewMockConn(ctrl)
-	conn.EXPECT().SetEncoding(Binary)
-	h.Enable(conn)
 
-	conn.EXPECT().SetEncoding(ASCII)
-	h.Disable(conn)
+	conn.EXPECT().SetReadEncoding(ASCII)
+	h.DisableForThem(conn)
+
+	conn.EXPECT().SetWriteEncoding(ASCII)
+	h.DisableForUs(conn)
+
+	conn.EXPECT().SetReadEncoding(Binary)
+	h.EnableForThem(conn)
+
+	conn.EXPECT().SetWriteEncoding(Binary)
+	h.EnableForUs(conn)
 }
