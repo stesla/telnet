@@ -14,6 +14,7 @@ type Conn interface {
 	AllowOption(handler OptionHandler, allowThem, allowUs bool)
 	EnableOptionForThem(option byte, enable bool) error
 	EnableOptionForUs(option byte, enable bool) error
+	OptionEnabled(option byte) (them, us bool)
 
 	Send(p []byte) (n int, err error)
 	SetEncoding(encoding.Encoding)
@@ -93,6 +94,12 @@ func (c *connection) EnableOptionForUs(option byte, enable bool) error {
 		_, err = c.Send(p)
 		return
 	})
+}
+
+func (c *connection) OptionEnabled(option byte) (them, us bool) {
+	opt := c.opts.get(option)
+	them, us = opt.enabledForThem(), opt.enabledForUs()
+	return
 }
 
 func (c *connection) Read(p []byte) (n int, err error) {
