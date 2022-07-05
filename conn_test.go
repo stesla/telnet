@@ -53,7 +53,8 @@ func TestOptionHandler(t *testing.T) {
 	conn.AllowOption(handler, true, true)
 
 	buf := make([]byte, 8)
-	handler.EXPECT().Enable(conn)
+	handler.EXPECT().EnableForUs(conn)
+	handler.EXPECT().EnableForThem(conn)
 	n, err := conn.Read(buf)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
@@ -73,7 +74,8 @@ func TestOptionHandler(t *testing.T) {
 		'i',
 	})
 	out.Reset()
-	handler.EXPECT().Disable(conn)
+	handler.EXPECT().DisableForUs(conn)
+	handler.EXPECT().DisableForThem(conn)
 	n, err = conn.Read(buf)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
@@ -192,8 +194,10 @@ func TestSuppresGoAhead(t *testing.T) {
 	conn := NewMockConn(ctrl)
 
 	conn.EXPECT().SuppressGoAhead(true)
-	h.Enable(conn)
+	h.EnableForUs(conn)
+	h.EnableForThem(conn)
 
 	conn.EXPECT().SuppressGoAhead(false)
-	h.Disable(conn)
+	h.DisableForUs(conn)
+	h.DisableForThem(conn)
 }

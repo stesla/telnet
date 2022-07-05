@@ -18,6 +18,8 @@ type Conn interface {
 
 	Send(p []byte) (n int, err error)
 	SetEncoding(encoding.Encoding)
+	SetReadEncoding(encoding.Encoding)
+	SetWriteEncoding(encoding.Encoding)
 	SuppressGoAhead(enabled bool)
 }
 
@@ -39,8 +41,10 @@ func Server(conn net.Conn) Conn {
 
 type OptionHandler interface {
 	Option() byte
-	Enable(Conn)
-	Disable(Conn)
+	DisableForUs(Conn)
+	DisableForThem(Conn)
+	EnableForUs(Conn)
+	EnableForThem(Conn)
 	Subnegotiation(Conn, []byte)
 }
 
@@ -111,7 +115,16 @@ func (c *connection) Send(p []byte) (int, error) {
 }
 
 func (c *connection) SetEncoding(enc encoding.Encoding) {
+	c.SetReadEncoding(enc)
+	c.SetWriteEncoding(enc)
+}
+
+func (c *connection) SetReadEncoding(enc encoding.Encoding) {
 	c.in = enc.NewDecoder().Reader(NewReader(c.r, c.handleCommand))
+}
+
+func (c *connection) SetWriteEncoding(enc encoding.Encoding) {
+
 	c.out = enc.NewEncoder().Writer(NewWriter(c.w))
 }
 
@@ -132,17 +145,23 @@ func (c *connection) handleCommand(cmd any) (err error) {
 	case *telnetGoAhead:
 		// do nothing
 	case *telnetOptionCommand:
+		them, us := c.OptionEnabled(t.opt)
 		opt := c.opts.get(byte(t.opt))
-		enabled := opt.enabledForUs()
 		err = opt.receive(t.cmd, func(p []byte) (err error) {
 			_, err = c.Send(p)
 			return
 		})
 		if handler, ok := c.handlers[opt.code]; ok {
-			if !enabled && opt.enabledForUs() {
-				handler.Enable(c)
-			} else if enabled && !opt.enabledForUs() {
-				handler.Disable(c)
+			newThem, newUs := c.OptionEnabled(t.opt)
+			switch {
+			case them && !newThem:
+				handler.DisableForThem(c)
+			case !them && newThem:
+				handler.EnableForThem(c)
+			case us && !newUs:
+				handler.DisableForUs(c)
+			case !us && newUs:
+				handler.EnableForUs(c)
 			}
 		}
 	case *telnetSubnegotiation:
@@ -157,12 +176,16 @@ type SuppressGoAheadOption struct{}
 
 func (SuppressGoAheadOption) Option() byte { return SuppressGoAhead }
 
-func (SuppressGoAheadOption) Enable(conn Conn) {
-	conn.SuppressGoAhead(true)
+func (s *SuppressGoAheadOption) DisableForThem(_ Conn) {}
+
+func (SuppressGoAheadOption) DisableForUs(conn Conn) {
+	conn.SuppressGoAhead(false)
 }
 
-func (SuppressGoAheadOption) Disable(conn Conn) {
-	conn.SuppressGoAhead(false)
+func (s *SuppressGoAheadOption) EnableForThem(_ Conn) {}
+
+func (SuppressGoAheadOption) EnableForUs(conn Conn) {
+	conn.SuppressGoAhead(true)
 }
 
 func (SuppressGoAheadOption) Subnegotiation(Conn, []byte) {}

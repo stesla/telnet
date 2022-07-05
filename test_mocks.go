@@ -131,6 +131,30 @@ func (mr *MockConnMockRecorder) SetEncoding(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetEncoding", reflect.TypeOf((*MockConn)(nil).SetEncoding), arg0)
 }
 
+// SetReadEncoding mocks base method.
+func (m *MockConn) SetReadEncoding(arg0 encoding.Encoding) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetReadEncoding", arg0)
+}
+
+// SetReadEncoding indicates an expected call of SetReadEncoding.
+func (mr *MockConnMockRecorder) SetReadEncoding(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReadEncoding", reflect.TypeOf((*MockConn)(nil).SetReadEncoding), arg0)
+}
+
+// SetWriteEncoding mocks base method.
+func (m *MockConn) SetWriteEncoding(arg0 encoding.Encoding) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetWriteEncoding", arg0)
+}
+
+// SetWriteEncoding indicates an expected call of SetWriteEncoding.
+func (mr *MockConnMockRecorder) SetWriteEncoding(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWriteEncoding", reflect.TypeOf((*MockConn)(nil).SetWriteEncoding), arg0)
+}
+
 // SuppressGoAhead mocks base method.
 func (m *MockConn) SuppressGoAhead(arg0 bool) {
 	m.ctrl.T.Helper()
@@ -181,28 +205,52 @@ func (m *MockOptionHandler) EXPECT() *MockOptionHandlerMockRecorder {
 	return m.recorder
 }
 
-// Disable mocks base method.
-func (m *MockOptionHandler) Disable(arg0 Conn) {
+// DisableForThem mocks base method.
+func (m *MockOptionHandler) DisableForThem(arg0 Conn) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Disable", arg0)
+	m.ctrl.Call(m, "DisableForThem", arg0)
 }
 
-// Disable indicates an expected call of Disable.
-func (mr *MockOptionHandlerMockRecorder) Disable(arg0 interface{}) *gomock.Call {
+// DisableForThem indicates an expected call of DisableForThem.
+func (mr *MockOptionHandlerMockRecorder) DisableForThem(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Disable", reflect.TypeOf((*MockOptionHandler)(nil).Disable), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableForThem", reflect.TypeOf((*MockOptionHandler)(nil).DisableForThem), arg0)
 }
 
-// Enable mocks base method.
-func (m *MockOptionHandler) Enable(arg0 Conn) {
+// DisableForUs mocks base method.
+func (m *MockOptionHandler) DisableForUs(arg0 Conn) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Enable", arg0)
+	m.ctrl.Call(m, "DisableForUs", arg0)
 }
 
-// Enable indicates an expected call of Enable.
-func (mr *MockOptionHandlerMockRecorder) Enable(arg0 interface{}) *gomock.Call {
+// DisableForUs indicates an expected call of DisableForUs.
+func (mr *MockOptionHandlerMockRecorder) DisableForUs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enable", reflect.TypeOf((*MockOptionHandler)(nil).Enable), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableForUs", reflect.TypeOf((*MockOptionHandler)(nil).DisableForUs), arg0)
+}
+
+// EnableForThem mocks base method.
+func (m *MockOptionHandler) EnableForThem(arg0 Conn) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EnableForThem", arg0)
+}
+
+// EnableForThem indicates an expected call of EnableForThem.
+func (mr *MockOptionHandlerMockRecorder) EnableForThem(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableForThem", reflect.TypeOf((*MockOptionHandler)(nil).EnableForThem), arg0)
+}
+
+// EnableForUs mocks base method.
+func (m *MockOptionHandler) EnableForUs(arg0 Conn) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EnableForUs", arg0)
+}
+
+// EnableForUs indicates an expected call of EnableForUs.
+func (mr *MockOptionHandlerMockRecorder) EnableForUs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableForUs", reflect.TypeOf((*MockOptionHandler)(nil).EnableForUs), arg0)
 }
 
 // Option mocks base method.
