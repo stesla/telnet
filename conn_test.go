@@ -184,3 +184,16 @@ func TestSubnegotiation(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, buf)
 }
+
+func TestSuppresGoAhead(t *testing.T) {
+	var h OptionHandler = &SuppressGoAheadOption{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	conn := NewMockConn(ctrl)
+
+	conn.EXPECT().SuppressGoAhead(true)
+	h.Enable(conn)
+
+	conn.EXPECT().SuppressGoAhead(false)
+	h.Disable(conn)
+}

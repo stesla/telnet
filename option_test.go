@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -134,20 +133,4 @@ func TestQMethodEnableOrDisable(t *testing.T) {
 		}
 		assert.NoError(t, err, testMsg)
 	}
-}
-
-func TestSuppresGoAhead(t *testing.T) {
-	var h OptionHandler = &SuppressGoAheadOption{}
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	conn := NewMockConn(ctrl)
-
-	conn.EXPECT().SuppressGoAhead(true)
-	h.Enable(conn)
-
-	conn.EXPECT().SuppressGoAhead(false)
-	h.Disable(conn)
-
-	// this should do nothing
-	h.Subnegotiation(conn, []byte("foo"))
 }
