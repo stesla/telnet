@@ -9,9 +9,11 @@ import (
 
 type CharsetOption struct{}
 
-func (*CharsetOption) Option() byte { return Charset }
-func (*CharsetOption) Enable(Conn)  {}
-func (*CharsetOption) Disable(Conn) {}
+func (*CharsetOption) Option() byte        { return Charset }
+func (*CharsetOption) EnableForThem(Conn)  {}
+func (*CharsetOption) DisableForThem(Conn) {}
+func (*CharsetOption) EnableForUs(Conn)    {}
+func (*CharsetOption) DisableForUs(Conn)   {}
 
 func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
 	cmd, buf := buf[0], buf[1:]

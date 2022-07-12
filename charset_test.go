@@ -12,8 +12,10 @@ func TestEnableDisable(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
-	h.Enable(conn)
-	h.Disable(conn)
+	h.EnableForThem(conn)
+	h.DisableForThem(conn)
+	h.EnableForUs(conn)
+	h.DisableForUs(conn)
 }
 
 func TestAcceptASCII(t *testing.T) {
