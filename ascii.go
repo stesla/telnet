@@ -17,8 +17,6 @@ func (a asciiEncoding) NewEncoder() *encoding.Encoder {
 	return &encoding.Encoder{Transformer: a}
 }
 
-func (asciiEncoding) String() string { return "ASCII" }
-
 func (a asciiEncoding) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
 	for i, c := range src {
 		if nDst >= len(dst) {

@@ -17,8 +17,6 @@ func (e binaryEncoding) NewEncoder() *encoding.Encoder {
 	return &encoding.Encoder{Transformer: e}
 }
 
-func (binaryEncoding) String() string { return "ASCII" }
-
 func (e binaryEncoding) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
 	for i, c := range src {
 		if nDst >= len(dst) {
