@@ -5,6 +5,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/text/encoding/unicode"
 )
 
@@ -28,14 +29,36 @@ func TestRejectIfNotEnabled(t *testing.T) {
 	})
 }
 
+func TestRejectWhenEnabled(t *testing.T) {
+	var tests = []string{
+		"",
+		";",
+		"[TTABLE]\x01",
+		"[TTABLE]\x01;",
+		";BOGUS;ENCODING;NAMES",
+	}
+	for _, test := range tests {
+		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
+			h.EnableForUs(conn)
+			expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
+			conn.EXPECT().Send(expected)
+			data := []byte{charsetRequest}
+			data = append(data, test...)
+			h.Subnegotiation(conn, data)
+		})
+	}
+}
+
 func TestAcceptEncoding(t *testing.T) {
 	var tests = []struct {
 		encoding           encoding.Encoding
 		encodingName       string
 		subnegotiationData string
 	}{
-		{ASCII, "US-ASCII", "[TTABLE]\x01;ISO-8859-1;US-ASCII;CP437"},
-		{unicode.UTF8, "UTF-8", "[TTABLE]\x01;UTF-8;ISO-8859-1;US-ASCII;CP437"},
+		{ASCII, "US-ASCII", "[TTABLE]\x01;US-ASCII;CP437"},
+		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437"},
+		{charmap.ISO8859_1, "ISO-8859-1", ";ISO-8859-1;US-ASCII;CP437"},
+		{charmap.CodePage437, "CP437", ";CP437;US-ASCII"},
 	}
 	for _, test := range tests {
 		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
