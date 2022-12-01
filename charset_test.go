@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/text/encoding/unicode"
@@ -19,8 +20,6 @@ func withCharsetAndConn(t *testing.T, f func(OptionHandler, *MockConn)) {
 
 func TestRejectIfNotEnabled(t *testing.T) {
 	withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
-		h.DisableForUs(conn)
-
 		expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
 		conn.EXPECT().Send(expected)
 		data := []byte{charsetRequest}
@@ -39,7 +38,7 @@ func TestRejectWhenEnabled(t *testing.T) {
 	}
 	for _, test := range tests {
 		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
-			h.EnableForUs(conn)
+			h.Update(conn, uint8(Charset), false, false, true, true)
 			expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
 			conn.EXPECT().Send(expected)
 			data := []byte{charsetRequest}
@@ -62,15 +61,17 @@ func TestAcceptEncoding(t *testing.T) {
 	}
 	for _, test := range tests {
 		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
-			h.EnableForUs(conn)
+			h.Update(conn, uint8(Charset), false, false, true, true)
 			expected := []byte{IAC, SB, Charset, charsetAccepted}
 			expected = append(expected, test.encodingName...)
 			expected = append(expected, IAC, SE)
 			conn.EXPECT().Send(expected)
-			conn.EXPECT().SetEncoding(test.encoding)
 			data := []byte{charsetRequest}
 			data = append(data, test.subnegotiationData...)
 			h.Subnegotiation(conn, data)
+
+			co := h.(*CharsetOption)
+			assert.Equal(t, test.encoding, co.enc)
 		})
 	}
 }

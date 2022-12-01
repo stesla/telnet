@@ -9,6 +9,7 @@ import (
 
 type CharsetOption struct {
 	enabledForThem, enabledForUs bool
+	enc                          encoding.Encoding
 }
 
 func (*CharsetOption) Option() byte          { return Charset }
@@ -43,12 +44,20 @@ func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
 		if encoding == nil {
 			c.sendCharsetRejected(conn)
 			return
+		} else {
+			c.enc = encoding
 		}
 		out := []byte{IAC, SB, Charset, charsetAccepted}
 		out = append(out, charset...)
 		out = append(out, IAC, SE)
 		conn.Send(out)
-		conn.SetEncoding(encoding)
+	}
+}
+
+func (c *CharsetOption) Update(conn Conn, option byte, theyChanged, them, weChanged, us bool) {
+	switch option {
+	case Charset:
+		c.enabledForThem, c.enabledForUs = them, us
 	}
 }
 

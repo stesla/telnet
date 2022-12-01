@@ -52,9 +52,17 @@ func TestOptionHandler(t *testing.T) {
 	handler.EXPECT().Option().Return(byte(Echo))
 	conn.AllowOption(handler, true, true)
 
+	handler2 := NewMockOptionHandler(ctrl)
+	handler2.EXPECT().Option().Return(byte(TransmitBinary))
+	conn.AllowOption(handler2, true, true)
+	opt := conn.opts.get(TransmitBinary)
+	opt.them, opt.us = telnetQYes, telnetQYes
+
 	buf := make([]byte, 8)
-	handler.EXPECT().EnableForUs(conn)
-	handler.EXPECT().EnableForThem(conn)
+	handler.EXPECT().Update(conn, uint8(Echo), true, true, false, false)
+	handler2.EXPECT().Update(conn, uint8(Echo), true, true, false, false)
+	handler.EXPECT().Update(conn, uint8(Echo), false, true, true, true)
+	handler2.EXPECT().Update(conn, uint8(Echo), false, true, true, true)
 	n, err := conn.Read(buf)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
@@ -74,8 +82,10 @@ func TestOptionHandler(t *testing.T) {
 		'i',
 	})
 	out.Reset()
-	handler.EXPECT().DisableForUs(conn)
-	handler.EXPECT().DisableForThem(conn)
+	handler.EXPECT().Update(conn, uint8(Echo), true, false, false, true)
+	handler2.EXPECT().Update(conn, uint8(Echo), true, false, false, true)
+	handler.EXPECT().Update(conn, uint8(Echo), false, false, true, false)
+	handler2.EXPECT().Update(conn, uint8(Echo), false, false, true, false)
 	n, err = conn.Read(buf)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
@@ -194,10 +204,10 @@ func TestSuppresGoAhead(t *testing.T) {
 	conn := NewMockConn(ctrl)
 
 	conn.EXPECT().SuppressGoAhead(true)
-	h.EnableForUs(conn)
-	h.EnableForThem(conn)
+	h.Update(conn, uint8(SuppressGoAhead), false, false, true, true)
 
 	conn.EXPECT().SuppressGoAhead(false)
-	h.DisableForUs(conn)
-	h.DisableForThem(conn)
+	h.Update(conn, uint8(SuppressGoAhead), true, true, true, false)
+
+	h.Update(conn, uint8(Echo), true, true, true, true)
 }
