@@ -7,15 +7,22 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
-type CharsetOption struct{}
+type CharsetOption struct {
+	enabledForThem, enabledForUs bool
+}
 
-func (*CharsetOption) Option() byte        { return Charset }
-func (*CharsetOption) EnableForUs(Conn)    {}
-func (*CharsetOption) EnableForThem(Conn)  {}
-func (*CharsetOption) DisableForUs(Conn)   {}
-func (*CharsetOption) DisableForThem(Conn) {}
+func (*CharsetOption) Option() byte          { return Charset }
+func (c *CharsetOption) DisableForThem(Conn) { c.enabledForThem = false }
+func (c *CharsetOption) DisableForUs(Conn)   { c.enabledForUs = false }
+func (c *CharsetOption) EnableForThem(Conn)  { c.enabledForThem = true }
+func (c *CharsetOption) EnableForUs(Conn)    { c.enabledForUs = true }
 
 func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
+	if !c.enabledForUs {
+		c.sendCharsetRejected(conn)
+		return
+	}
+
 	cmd, buf := buf[0], buf[1:]
 	switch cmd {
 	case charsetRequest:
@@ -52,4 +59,8 @@ func (c *CharsetOption) selectEncoding(names [][]byte) (charset []byte, enc enco
 		}
 	}
 	return
+}
+
+func (c *CharsetOption) sendCharsetRejected(conn Conn) {
+	conn.Send([]byte{IAC, SB, Charset, charsetRejected, IAC, SE})
 }
