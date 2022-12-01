@@ -172,18 +172,6 @@ type SuppressGoAheadOption struct{}
 
 func (SuppressGoAheadOption) Option() byte { return SuppressGoAhead }
 
-func (s *SuppressGoAheadOption) DisableForThem(_ Conn) {}
-
-func (SuppressGoAheadOption) DisableForUs(conn Conn) {
-	conn.SuppressGoAhead(false)
-}
-
-func (s *SuppressGoAheadOption) EnableForThem(_ Conn) {}
-
-func (SuppressGoAheadOption) EnableForUs(conn Conn) {
-	conn.SuppressGoAhead(true)
-}
-
 func (SuppressGoAheadOption) Subnegotiation(Conn, []byte) {}
 
 func (SuppressGoAheadOption) Update(c Conn, option byte, theyChanged, them, weChanged, us bool) {

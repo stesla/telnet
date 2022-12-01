@@ -12,11 +12,7 @@ type CharsetOption struct {
 	enc                          encoding.Encoding
 }
 
-func (*CharsetOption) Option() byte          { return Charset }
-func (c *CharsetOption) DisableForThem(Conn) { c.enabledForThem = false }
-func (c *CharsetOption) DisableForUs(Conn)   { c.enabledForUs = false }
-func (c *CharsetOption) EnableForThem(Conn)  { c.enabledForThem = true }
-func (c *CharsetOption) EnableForUs(Conn)    { c.enabledForUs = true }
+func (*CharsetOption) Option() byte { return Charset }
 
 func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
 	if !c.enabledForUs {
