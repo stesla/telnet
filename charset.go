@@ -54,6 +54,14 @@ func (c *CharsetOption) Update(conn Conn, option byte, theyChanged, them, weChan
 	switch option {
 	case Charset:
 		c.enabledForThem, c.enabledForUs = them, us
+	case TransmitBinary:
+		if c.enabledForUs && c.enc != nil {
+			if them && us {
+				conn.SetEncoding(c.enc)
+			} else {
+				conn.SetEncoding(ASCII)
+			}
+		}
 	}
 }
 
