@@ -88,23 +88,22 @@ func TestAcceptEncoding(t *testing.T) {
 
 func TestUpdateTransmitBinary(t *testing.T) {
 	var tests = []struct {
-		option            uint8
 		enabled           bool
 		theyChanged, them bool
 		weChanged, us     bool
 		enc               encoding.Encoding
 		expected          encoding.Encoding
 	}{
-		{TransmitBinary, true, false, false, false, false, nil, nil},
-		{TransmitBinary, true, false, false, true, true, nil, nil},
-		{TransmitBinary, true, true, true, false, false, nil, nil},
-		{TransmitBinary, true, true, true, true, true, nil, nil},
-		{TransmitBinary, true, false, true, false, true, unicode.UTF8, unicode.UTF8},
-		{TransmitBinary, true, true, true, true, true, unicode.UTF8, unicode.UTF8},
-		{TransmitBinary, true, true, false, true, true, unicode.UTF8, ASCII},
-		{TransmitBinary, true, true, true, true, false, unicode.UTF8, ASCII},
-		{TransmitBinary, false, true, true, true, true, unicode.UTF8, nil},
-		{TransmitBinary, false, false, false, false, false, unicode.UTF8, nil},
+		{true, false, false, false, false, nil, nil},
+		{true, false, false, true, true, nil, nil},
+		{true, true, true, false, false, nil, nil},
+		{true, true, true, true, true, nil, nil},
+		{true, false, true, false, true, unicode.UTF8, unicode.UTF8},
+		{true, true, true, true, true, unicode.UTF8, unicode.UTF8},
+		{true, true, false, true, true, unicode.UTF8, ASCII},
+		{true, true, true, true, false, unicode.UTF8, ASCII},
+		{false, true, true, true, true, unicode.UTF8, nil},
+		{false, false, false, false, false, unicode.UTF8, nil},
 	}
 	for _, test := range tests {
 		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
@@ -118,7 +117,7 @@ func TestUpdateTransmitBinary(t *testing.T) {
 			if test.expected != nil {
 				conn.EXPECT().SetEncoding(test.expected)
 			}
-			h.Update(conn, test.option, test.theyChanged, test.them, test.weChanged, test.us)
+			h.Update(conn, TransmitBinary, test.theyChanged, test.them, test.weChanged, test.us)
 		})
 	}
 }
