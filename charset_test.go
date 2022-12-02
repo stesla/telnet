@@ -50,14 +50,18 @@ func TestRejectWhenEnabled(t *testing.T) {
 
 func TestAcceptEncoding(t *testing.T) {
 	var tests = []struct {
-		encoding           encoding.Encoding
-		encodingName       string
-		subnegotiationData string
+		encoding             encoding.Encoding
+		encodingName         string
+		subnegotiationData   string
+		binaryThem, binaryUs bool
+		expected             bool
 	}{
-		{ASCII, "US-ASCII", "[TTABLE]\x01;US-ASCII;CP437"},
-		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437"},
-		{charmap.ISO8859_1, "ISO-8859-1", ";ISO-8859-1;US-ASCII;CP437"},
-		{charmap.CodePage437, "CP437", ";CP437;US-ASCII"},
+		{ASCII, "US-ASCII", "[TTABLE]\x01;US-ASCII;CP437", true, true, true},
+		{charmap.ISO8859_1, "ISO-8859-1", ";ISO-8859-1;US-ASCII;CP437", true, true, true},
+		{charmap.CodePage437, "CP437", ";CP437;US-ASCII", true, true, true},
+		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", true, true, true},
+		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", false, true, false},
+		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", true, false, false},
 	}
 	for _, test := range tests {
 		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
@@ -66,6 +70,12 @@ func TestAcceptEncoding(t *testing.T) {
 			expected = append(expected, test.encodingName...)
 			expected = append(expected, IAC, SE)
 			conn.EXPECT().Send(expected)
+			conn.EXPECT().OptionEnabled(uint8(TransmitBinary)).Return(test.binaryThem, test.binaryUs)
+			if test.expected {
+				conn.EXPECT().SetEncoding(test.encoding)
+			} else {
+				conn.EXPECT().SetEncoding(ASCII)
+			}
 			data := []byte{charsetRequest}
 			data = append(data, test.subnegotiationData...)
 			h.Subnegotiation(conn, data)

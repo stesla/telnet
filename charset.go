@@ -47,6 +47,9 @@ func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
 		out = append(out, charset...)
 		out = append(out, IAC, SE)
 		conn.Send(out)
+
+		them, us := conn.OptionEnabled(TransmitBinary)
+		c.Update(conn, TransmitBinary, false, them, false, us)
 	}
 }
 
