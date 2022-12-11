@@ -22,43 +22,35 @@ type qMethodTest struct {
 	fn func(sendfunc) error
 }
 
-func themFn(opt *option, state telnetQState, allowed bool) {
-	opt.them, opt.allowThem = state, allowed
-}
-
-func usFn(opt *option, state telnetQState, allowed bool) {
-	opt.us, opt.allowUs = state, allowed
-}
-
 func TestQMethodReceive(t *testing.T) {
 	o := newOption(SuppressGoAhead)
 	tests := []*qMethodTest{
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQNo, permitted: false, end: telnetQNo, expected: WONT},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQNo, permitted: true, end: telnetQYes, expected: WILL},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQYes, end: telnetQYes},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantNoEmpty, end: telnetQNo},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantNoOpposite, end: telnetQYes},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantYesEmpty, end: telnetQYes},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantYesOpposite, end: telnetQWantNoEmpty, expected: WONT},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQNo, end: telnetQNo},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQYes, end: telnetQNo, expected: WONT},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantNoEmpty, end: telnetQNo},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantNoOpposite, end: telnetQWantYesEmpty, expected: WILL},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantYesEmpty, end: telnetQNo},
-		&qMethodTest{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantYesOpposite, end: telnetQNo},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQNo, permitted: false, end: telnetQNo, expected: DONT},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQNo, permitted: true, end: telnetQYes, expected: DO},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQYes, end: telnetQYes},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantNoEmpty, end: telnetQNo},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantNoOpposite, end: telnetQYes},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantYesEmpty, end: telnetQYes},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantYesOpposite, end: telnetQWantNoEmpty, expected: DONT},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQNo, end: telnetQNo},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQYes, end: telnetQNo, expected: DONT},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantNoEmpty, end: telnetQNo},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantNoOpposite, end: telnetQWantYesEmpty, expected: DO},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantYesEmpty, end: telnetQNo},
-		&qMethodTest{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantYesOpposite, end: telnetQNo},
+		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQNo, permitted: false, end: telnetQNo, expected: WONT},
+		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQNo, permitted: true, end: telnetQYes, expected: WILL},
+		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQYes, end: telnetQYes},
+		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantNoEmpty, end: telnetQNo},
+		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantNoOpposite, end: telnetQYes},
+		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantYesEmpty, end: telnetQYes},
+		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQWantYesOpposite, end: telnetQWantNoEmpty, expected: WONT},
+		{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQNo, end: telnetQNo},
+		{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQYes, end: telnetQNo, expected: WONT},
+		{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantNoEmpty, end: telnetQNo},
+		{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantNoOpposite, end: telnetQWantYesEmpty, expected: WILL},
+		{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantYesEmpty, end: telnetQNo},
+		{state: &o.us, allow: &o.allowUs, receive: DONT, start: telnetQWantYesOpposite, end: telnetQNo},
+		{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQNo, permitted: false, end: telnetQNo, expected: DONT},
+		{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQNo, permitted: true, end: telnetQYes, expected: DO},
+		{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQYes, end: telnetQYes},
+		{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantNoEmpty, end: telnetQNo},
+		{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantNoOpposite, end: telnetQYes},
+		{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantYesEmpty, end: telnetQYes},
+		{state: &o.them, allow: &o.allowThem, receive: WILL, start: telnetQWantYesOpposite, end: telnetQWantNoEmpty, expected: DONT},
+		{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQNo, end: telnetQNo},
+		{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQYes, end: telnetQNo, expected: DONT},
+		{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantNoEmpty, end: telnetQNo},
+		{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantNoOpposite, end: telnetQWantYesEmpty, expected: DO},
+		{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantYesEmpty, end: telnetQNo},
+		{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantYesOpposite, end: telnetQNo},
 	}
 	for _, q := range tests {
 		testMsg := fmt.Sprintf("test %s %s %v", commandByte(q.receive), q.start, q.permitted)
@@ -81,30 +73,30 @@ func TestQMethodEnableOrDisable(t *testing.T) {
 	enableThem := fmt.Sprintf("%p", o.enableThem)
 	enableUs := fmt.Sprintf("%p", o.enableUs)
 	tests := []*qMethodTest{
-		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQNo, end: telnetQNo},
-		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQYes, end: telnetQWantNoEmpty, expected: DONT},
-		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQWantNoEmpty, end: telnetQWantNoEmpty},
-		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQWantNoOpposite, end: telnetQWantNoEmpty},
-		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQWantYesEmpty, end: telnetQWantYesOpposite},
-		&qMethodTest{fn: o.disableThem, state: &o.them, start: telnetQWantYesOpposite, end: telnetQWantYesOpposite},
-		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQNo, end: telnetQNo},
-		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQYes, end: telnetQWantNoEmpty, expected: WONT},
-		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQWantNoEmpty, end: telnetQWantNoEmpty},
-		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQWantNoOpposite, end: telnetQWantNoEmpty},
-		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQWantYesEmpty, end: telnetQWantYesOpposite},
-		&qMethodTest{fn: o.disableUs, state: &o.us, start: telnetQWantYesOpposite, end: telnetQWantYesOpposite},
-		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQNo, end: telnetQWantYesEmpty, expected: DO},
-		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQYes, end: telnetQYes},
-		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQWantNoEmpty, end: telnetQWantNoOpposite},
-		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQWantNoOpposite, end: telnetQWantNoOpposite},
-		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQWantYesEmpty, end: telnetQWantYesEmpty},
-		&qMethodTest{fn: o.enableThem, state: &o.them, start: telnetQWantYesOpposite, end: telnetQWantYesEmpty},
-		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQNo, end: telnetQWantYesEmpty, expected: WILL},
-		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQYes, end: telnetQYes},
-		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQWantNoEmpty, end: telnetQWantNoOpposite},
-		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQWantNoOpposite, end: telnetQWantNoOpposite},
-		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQWantYesEmpty, end: telnetQWantYesEmpty},
-		&qMethodTest{fn: o.enableUs, state: &o.us, start: telnetQWantYesOpposite, end: telnetQWantYesEmpty},
+		{fn: o.disableThem, state: &o.them, start: telnetQNo, end: telnetQNo},
+		{fn: o.disableThem, state: &o.them, start: telnetQYes, end: telnetQWantNoEmpty, expected: DONT},
+		{fn: o.disableThem, state: &o.them, start: telnetQWantNoEmpty, end: telnetQWantNoEmpty},
+		{fn: o.disableThem, state: &o.them, start: telnetQWantNoOpposite, end: telnetQWantNoEmpty},
+		{fn: o.disableThem, state: &o.them, start: telnetQWantYesEmpty, end: telnetQWantYesOpposite},
+		{fn: o.disableThem, state: &o.them, start: telnetQWantYesOpposite, end: telnetQWantYesOpposite},
+		{fn: o.disableUs, state: &o.us, start: telnetQNo, end: telnetQNo},
+		{fn: o.disableUs, state: &o.us, start: telnetQYes, end: telnetQWantNoEmpty, expected: WONT},
+		{fn: o.disableUs, state: &o.us, start: telnetQWantNoEmpty, end: telnetQWantNoEmpty},
+		{fn: o.disableUs, state: &o.us, start: telnetQWantNoOpposite, end: telnetQWantNoEmpty},
+		{fn: o.disableUs, state: &o.us, start: telnetQWantYesEmpty, end: telnetQWantYesOpposite},
+		{fn: o.disableUs, state: &o.us, start: telnetQWantYesOpposite, end: telnetQWantYesOpposite},
+		{fn: o.enableThem, state: &o.them, start: telnetQNo, end: telnetQWantYesEmpty, expected: DO},
+		{fn: o.enableThem, state: &o.them, start: telnetQYes, end: telnetQYes},
+		{fn: o.enableThem, state: &o.them, start: telnetQWantNoEmpty, end: telnetQWantNoOpposite},
+		{fn: o.enableThem, state: &o.them, start: telnetQWantNoOpposite, end: telnetQWantNoOpposite},
+		{fn: o.enableThem, state: &o.them, start: telnetQWantYesEmpty, end: telnetQWantYesEmpty},
+		{fn: o.enableThem, state: &o.them, start: telnetQWantYesOpposite, end: telnetQWantYesEmpty},
+		{fn: o.enableUs, state: &o.us, start: telnetQNo, end: telnetQWantYesEmpty, expected: WILL},
+		{fn: o.enableUs, state: &o.us, start: telnetQYes, end: telnetQYes},
+		{fn: o.enableUs, state: &o.us, start: telnetQWantNoEmpty, end: telnetQWantNoOpposite},
+		{fn: o.enableUs, state: &o.us, start: telnetQWantNoOpposite, end: telnetQWantNoOpposite},
+		{fn: o.enableUs, state: &o.us, start: telnetQWantYesEmpty, end: telnetQWantYesEmpty},
+		{fn: o.enableUs, state: &o.us, start: telnetQWantYesOpposite, end: telnetQWantYesEmpty},
 	}
 	for _, q := range tests {
 		var action, who string

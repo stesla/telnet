@@ -36,22 +36,28 @@ func (a binaryEncoding) Reset() {}
 
 type TransmitBinaryOption struct{}
 
-func (t *TransmitBinaryOption) DisableForUs(conn Conn) {
-	conn.SetWriteEncoding(ASCII)
-}
-
-func (t *TransmitBinaryOption) DisableForThem(conn Conn) {
-	conn.SetReadEncoding(ASCII)
-}
-
-func (t *TransmitBinaryOption) EnableForUs(conn Conn) {
-	conn.SetWriteEncoding(Binary)
-}
-
-func (t *TransmitBinaryOption) EnableForThem(conn Conn) {
-	conn.SetReadEncoding(Binary)
-}
-
 func (t *TransmitBinaryOption) Option() byte { return TransmitBinary }
 
 func (t *TransmitBinaryOption) Subnegotiation(_ Conn, _ []byte) {}
+
+func (t *TransmitBinaryOption) Update(c Conn, option byte, theyChanged, them, weChanged, us bool) {
+	if TransmitBinary != option {
+		return
+	}
+
+	if theyChanged {
+		if them {
+			c.SetReadEncoding(Binary)
+		} else {
+			c.SetReadEncoding(ASCII)
+		}
+	}
+
+	if weChanged {
+		if us {
+			c.SetWriteEncoding(Binary)
+		} else {
+			c.SetWriteEncoding(ASCII)
+		}
+	}
+}

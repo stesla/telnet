@@ -11,10 +11,10 @@ func NewReader(r io.Reader, fn func(any) error) io.Reader {
 }
 
 type reader struct {
-	in     io.Reader
-	b, buf []byte
-	state  readerState
-	cmdfn  func(any) error
+	in    io.Reader
+	b     []byte
+	state readerState
+	cmdfn func(any) error
 }
 
 type readerState func(byte) (readerState, byte, bool, error)

@@ -41,11 +41,8 @@ func Server(conn net.Conn) Conn {
 
 type OptionHandler interface {
 	Option() byte
-	DisableForUs(Conn)
-	DisableForThem(Conn)
-	EnableForUs(Conn)
-	EnableForThem(Conn)
 	Subnegotiation(Conn, []byte)
+	Update(c Conn, option byte, theyChanged, them, weChanged, us bool)
 }
 
 type connection struct {
@@ -153,15 +150,14 @@ func (c *connection) handleCommand(cmd any) (err error) {
 		})
 		if handler, ok := c.handlers[opt.code]; ok {
 			newThem, newUs := c.OptionEnabled(t.opt)
-			switch {
-			case them && !newThem:
-				handler.DisableForThem(c)
-			case !them && newThem:
-				handler.EnableForThem(c)
-			case us && !newUs:
-				handler.DisableForUs(c)
-			case !us && newUs:
-				handler.EnableForUs(c)
+			theyChanged := them != newThem
+			weChanged := us != newUs
+			handler.Update(c, opt.code, theyChanged, newThem, weChanged, newUs)
+			for o, h := range c.handlers {
+				if o == opt.code {
+					continue
+				}
+				h.Update(c, opt.code, theyChanged, newThem, weChanged, newUs)
 			}
 		}
 	case *telnetSubnegotiation:
@@ -176,16 +172,10 @@ type SuppressGoAheadOption struct{}
 
 func (SuppressGoAheadOption) Option() byte { return SuppressGoAhead }
 
-func (s *SuppressGoAheadOption) DisableForThem(_ Conn) {}
-
-func (SuppressGoAheadOption) DisableForUs(conn Conn) {
-	conn.SuppressGoAhead(false)
-}
-
-func (s *SuppressGoAheadOption) EnableForThem(_ Conn) {}
-
-func (SuppressGoAheadOption) EnableForUs(conn Conn) {
-	conn.SuppressGoAhead(true)
-}
-
 func (SuppressGoAheadOption) Subnegotiation(Conn, []byte) {}
+
+func (SuppressGoAheadOption) Update(c Conn, option byte, theyChanged, them, weChanged, us bool) {
+	if SuppressGoAhead == option && weChanged {
+		c.SuppressGoAhead(us)
+	}
+}
