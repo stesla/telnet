@@ -10,6 +10,7 @@ import (
 type Conn interface {
 	io.Reader
 	io.Writer
+	Logger
 
 	AllowOption(handler OptionHandler, allowThem, allowUs bool)
 	EnableOptionForThem(option byte, enable bool) error
@@ -18,6 +19,7 @@ type Conn interface {
 
 	Send(p []byte) (n int, err error)
 	SetEncoding(encoding.Encoding)
+	SetLogger(Logger)
 	SetReadEncoding(encoding.Encoding)
 	SetWriteEncoding(encoding.Encoding)
 	SuppressGoAhead(enabled bool)
@@ -46,6 +48,8 @@ type OptionHandler interface {
 }
 
 type connection struct {
+	Logger
+
 	opts            *optionMap
 	handlers        map[byte]OptionHandler
 	r, in           io.Reader
@@ -55,6 +59,7 @@ type connection struct {
 
 func newConnection(r io.Reader, w io.Writer) *connection {
 	conn := &connection{
+		Logger:   NullLogger{},
 		opts:     newOptionMap(),
 		handlers: make(map[byte]OptionHandler),
 		r:        r,
@@ -114,6 +119,10 @@ func (c *connection) Send(p []byte) (int, error) {
 func (c *connection) SetEncoding(enc encoding.Encoding) {
 	c.SetReadEncoding(enc)
 	c.SetWriteEncoding(enc)
+}
+
+func (c *connection) SetLogger(logger Logger) {
+	c.Logger = logger
 }
 
 func (c *connection) SetReadEncoding(enc encoding.Encoding) {
