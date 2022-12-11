@@ -86,6 +86,27 @@ func TestAcceptEncoding(t *testing.T) {
 	}
 }
 
+func TestUpdateCharset(t *testing.T) {
+	var tests = []struct {
+		theyChanged, them                      bool
+		weChanged, us                          bool
+		expectedThemEnabled, expectedUsEnabled bool
+	}{
+		{false, false, false, false, false, false},
+		{false, true, false, true, true, true},
+		{true, false, true, false, false, false},
+		{true, false, true, true, false, true},
+	}
+	for _, test := range tests {
+		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
+			h.Update(conn, Charset, test.theyChanged, test.them, test.weChanged, test.us)
+			co := h.(*CharsetOption)
+			assert.Equal(t, test.expectedThemEnabled, co.enabledForThem)
+			assert.Equal(t, test.expectedUsEnabled, co.enabledForUs)
+		})
+	}
+}
+
 func TestUpdateTransmitBinary(t *testing.T) {
 	var tests = []struct {
 		enabled           bool
