@@ -39,7 +39,7 @@ func TestSimple(t *testing.T) {
 func TestCRIsUsuallyIgnored(t *testing.T) {
 	const (
 		min byte = 0
-		max      = 127
+		max byte = 127
 	)
 	for c := min; c < max; c++ {
 		if c == 0 || c == '\n' {
@@ -108,7 +108,7 @@ func TestEOFOnSeparateRead(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
 	n, err = r.Read(buf)
-	assert.Error(t, io.EOF)
+	assert.Equal(t, io.EOF, err)
 	assert.Equal(t, 0, n)
 }
 
