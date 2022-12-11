@@ -1,3 +1,3 @@
 package telnet
 
-//go:generate mockgen -package=telnet -destination=test_mocks.go . Conn,OptionHandler,Log
+//go:generate mockgen -package=telnet -destination=test_mocks.go . Conn,OptionHandler,Log,Logger

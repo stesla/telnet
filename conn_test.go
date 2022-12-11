@@ -35,6 +35,24 @@ func TestWriteGoAhead(t *testing.T) {
 	assert.Equal(t, []byte("foo"), out.Bytes())
 }
 
+func expectReceiveOptionCommand(logger *MockLogger, cmd, opt byte) {
+	logger.EXPECT().Logf(
+		DEBUG,
+		"RECV: IAC %s %s",
+		commandByte(cmd),
+		optionByte(opt),
+	)
+}
+
+func expectSendOptionCommand(logger *MockLogger, cmd, opt byte) {
+	logger.EXPECT().Logf(
+		DEBUG,
+		"SEND: IAC %s %s",
+		commandByte(cmd),
+		optionByte(opt),
+	)
+}
+
 func TestOptionHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -47,6 +65,14 @@ func TestOptionHandler(t *testing.T) {
 		'i',
 	})
 	conn := newConnection(in, &out)
+
+	logger := NewMockLogger(ctrl)
+	conn.SetLogger(logger)
+
+	expectReceiveOptionCommand(logger, WILL, Echo)
+	expectSendOptionCommand(logger, DO, Echo)
+	expectReceiveOptionCommand(logger, DO, Echo)
+	expectSendOptionCommand(logger, WILL, Echo)
 
 	handler := NewMockOptionHandler(ctrl)
 	handler.EXPECT().Option().Return(byte(Echo))
@@ -73,6 +99,11 @@ func TestOptionHandler(t *testing.T) {
 	them, us := conn.OptionEnabled(Echo)
 	assert.True(t, them)
 	assert.True(t, us)
+
+	expectReceiveOptionCommand(logger, WONT, Echo)
+	expectSendOptionCommand(logger, DONT, Echo)
+	expectReceiveOptionCommand(logger, DONT, Echo)
+	expectSendOptionCommand(logger, WONT, Echo)
 
 	buf = make([]byte, 8)
 	in.Write([]byte{

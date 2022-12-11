@@ -151,9 +151,12 @@ func (c *connection) handleCommand(cmd any) (err error) {
 	case *telnetGoAhead:
 		// do nothing
 	case *telnetOptionCommand:
+		c.Logf(DEBUG, "RECV: IAC %s %s", commandByte(t.cmd), optionByte(t.opt))
 		them, us := c.OptionEnabled(t.opt)
 		opt := c.opts.get(byte(t.opt))
 		err = opt.receive(t.cmd, func(p []byte) (err error) {
+			cmd, opt := p[1], p[2]
+			c.Logf(DEBUG, "SEND: IAC %s %s", commandByte(cmd), optionByte(opt))
 			_, err = c.Send(p)
 			return
 		})
