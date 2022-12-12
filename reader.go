@@ -115,7 +115,6 @@ func (r *reader) decodeSubnegotiation(option byte) (readerState, byte, bool, err
 			}
 			return r.decodeByte, c, false, err
 		default:
-			r.handleCommand(c)
 			return r.decodeByte, c, false, nil
 		}
 	}

@@ -11,8 +11,17 @@ import (
 )
 
 func TestReadGoAhead(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	in := bytes.NewBuffer([]byte{'h', IAC, GA, 'i'})
 	conn := newConnection(in, nil)
+
+	logger := NewMockLogger(ctrl)
+	conn.SetLogger(logger)
+
+	logger.EXPECT().Logf(DEBUG, "RECV: %s", &telnetGoAhead{})
+
 	buf := make([]byte, 8)
 	n, err := conn.Read(buf)
 	assert.NoError(t, err)
@@ -38,9 +47,8 @@ func TestWriteGoAhead(t *testing.T) {
 func expectReceiveOptionCommand(logger *MockLogger, cmd, opt byte) {
 	logger.EXPECT().Logf(
 		DEBUG,
-		"RECV: IAC %s %s",
-		commandByte(cmd),
-		optionByte(opt),
+		"RECV: %s",
+		&telnetOptionCommand{cmd, opt},
 	)
 }
 

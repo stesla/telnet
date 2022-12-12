@@ -1,6 +1,7 @@
 package telnet
 
 import (
+	"fmt"
 	"io"
 	"net"
 
@@ -141,11 +142,14 @@ func (c *connection) Write(p []byte) (n int, err error) {
 }
 
 func (c *connection) handleCommand(cmd any) (err error) {
+	if s, ok := cmd.(fmt.Stringer); ok {
+		c.Logf(DEBUG, "RECV: %s", s)
+	}
+
 	switch t := cmd.(type) {
 	case *telnetGoAhead:
 		// do nothing
 	case *telnetOptionCommand:
-		c.Logf(DEBUG, "RECV: IAC %s %s", commandByte(t.cmd), optionByte(t.opt))
 		them, us := c.OptionEnabled(t.opt)
 		opt := c.opts.get(byte(t.opt))
 		err = opt.receive(t.cmd, c.sendOptionCommand)
