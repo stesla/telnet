@@ -17,8 +17,6 @@ func (*CharsetOption) Option() byte { return Charset }
 func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
 	cmd, buf := buf[0], buf[1:]
 
-	c.log(conn, charsetByte(cmd), "RECV: IAC SB %s %s %s IAC SE", string(buf))
-
 	if !c.enabledForUs {
 		c.sendCharsetRejected(conn)
 		return
