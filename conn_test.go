@@ -130,8 +130,17 @@ func TestOptionHandler(t *testing.T) {
 }
 
 func TestEnableOption(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	var out bytes.Buffer
 	conn := newConnection(nil, &out)
+
+	logger := NewMockLogger(ctrl)
+	conn.SetLogger(logger)
+
+	expectSendOptionCommand(logger, DO, Echo)
+	expectSendOptionCommand(logger, WILL, Echo)
 
 	conn.EnableOptionForThem(Echo, true)
 	conn.EnableOptionForUs(Echo, true)
@@ -144,6 +153,9 @@ func TestEnableOption(t *testing.T) {
 	opt := conn.opts.get(Echo)
 	opt.them = telnetQYes
 	opt.us = telnetQYes
+
+	expectSendOptionCommand(logger, DONT, Echo)
+	expectSendOptionCommand(logger, WONT, Echo)
 
 	conn.EnableOptionForThem(Echo, false)
 	conn.EnableOptionForUs(Echo, false)
