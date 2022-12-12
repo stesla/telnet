@@ -82,8 +82,8 @@ func (c *connection) EnableOptionForThem(option byte, enable bool) error {
 	} else {
 		fn = opt.disableThem
 	}
-	return fn(func(p []byte) (err error) {
-		_, err = c.Send(p)
+	return fn(func(cmd, opt byte) (err error) {
+		_, err = c.Send([]byte{IAC, cmd, opt})
 		return
 	})
 }
@@ -96,8 +96,8 @@ func (c *connection) EnableOptionForUs(option byte, enable bool) error {
 	} else {
 		fn = opt.disableUs
 	}
-	return fn(func(p []byte) (err error) {
-		_, err = c.Send(p)
+	return fn(func(cmd, opt byte) (err error) {
+		_, err = c.Send([]byte{IAC, cmd, opt})
 		return
 	})
 }
@@ -154,10 +154,9 @@ func (c *connection) handleCommand(cmd any) (err error) {
 		c.Logf(DEBUG, "RECV: IAC %s %s", commandByte(t.cmd), optionByte(t.opt))
 		them, us := c.OptionEnabled(t.opt)
 		opt := c.opts.get(byte(t.opt))
-		err = opt.receive(t.cmd, func(p []byte) (err error) {
-			cmd, opt := p[1], p[2]
+		err = opt.receive(t.cmd, func(cmd, opt byte) (err error) {
 			c.Logf(DEBUG, "SEND: IAC %s %s", commandByte(cmd), optionByte(opt))
-			_, err = c.Send(p)
+			_, err = c.Send([]byte{IAC, cmd, opt})
 			return
 		})
 		if handler, ok := c.handlers[opt.code]; ok {
