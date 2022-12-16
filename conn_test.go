@@ -251,6 +251,32 @@ func TestSubnegotiation(t *testing.T) {
 	assert.Empty(t, buf)
 }
 
+func TestSubnegotiationForUnsupportedOption(t *testing.T) {
+	// This case should never actually happen, as subnegotiation should only
+	// happen for options we've already negotiated. But, telnet implementations
+	// don't always play by the rules, and if we're interacting with a broken
+	// implementation, logging what they send us is good.
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	in := bytes.NewBuffer([]byte{IAC, SB, Echo, 'h', 'i', IAC, SE})
+	conn := newConnection(in, nil)
+
+	logger := NewMockLogger(ctrl)
+	logger.EXPECT().Logf(
+		DEBUG,
+		"RECV: IAC SB %s %q IAC SE",
+		optionByte(Echo),
+		[]byte("hi"),
+	)
+
+	conn.SetLogger(logger)
+
+	buf, err := ioutil.ReadAll(conn)
+	assert.NoError(t, err)
+	assert.Empty(t, buf)
+}
+
 func TestSuppresGoAhead(t *testing.T) {
 	var h OptionHandler = &SuppressGoAheadOption{}
 	ctrl := gomock.NewController(t)
