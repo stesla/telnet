@@ -166,7 +166,7 @@ func (c *connection) handleCommand(cmd any) (err error) {
 			}
 		}
 	case *telnetSubnegotiation:
-		if handler, ok := c.handlers[t.opt]; ok && len(t.bytes) > 0 {
+		if handler, ok := c.handlers[t.opt]; ok {
 			handler.Subnegotiation(c, t.bytes)
 		}
 	}
