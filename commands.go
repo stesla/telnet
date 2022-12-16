@@ -125,7 +125,3 @@ type telnetSubnegotiation struct {
 	opt   byte
 	bytes []byte
 }
-
-func (t telnetSubnegotiation) String() string {
-	return fmt.Sprintf("IAC SB %s %q IAC SE", optionByte(t.opt), t.bytes)
-}

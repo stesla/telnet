@@ -238,7 +238,6 @@ func TestSubnegotiation(t *testing.T) {
 
 	logger := NewMockLogger(ctrl)
 	conn.SetLogger(logger)
-	logger.EXPECT().Logf(DEBUG, "RECV: %s", &telnetSubnegotiation{Echo, []byte("hi")})
 
 	handler := NewMockOptionHandler(ctrl)
 	handler.EXPECT().Option().Return(byte(Echo))

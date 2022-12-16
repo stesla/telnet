@@ -133,7 +133,7 @@ func TestErrorInCommandHandler(t *testing.T) {
 func TestTelnetCommand(t *testing.T) {
 	var tests = []struct {
 		in, expected []byte
-		cmd          fmt.Stringer
+		cmd          any
 	}{
 		{[]byte{'h', IAC, GA, 'i'}, []byte("hi"), &telnetGoAhead{}},
 		{[]byte{'h', IAC, DO, Echo, 'i'}, []byte("hi"), &telnetOptionCommand{DO, Echo}},
@@ -151,15 +151,16 @@ func TestTelnetCommand(t *testing.T) {
 		})
 		buf := make([]byte, 16)
 		n, err := r.Read(buf)
-		assert.NoError(t, err, test.cmd.String())
-		assert.Equal(t, test.expected, buf[:n], test.cmd.String())
-		assert.Equal(t, test.cmd, actual, test.cmd.String())
+		msg := fmt.Sprintf("%v", test.cmd)
+		assert.NoError(t, err, msg)
+		assert.Equal(t, test.expected, buf[:n], msg)
+		assert.Equal(t, test.cmd, actual, msg)
 
 		r = NewReader(bytes.NewBuffer(test.in), func(cmd any) error {
 			return errors.New("boom")
 		})
 		n, err = r.Read(buf)
-		assert.Error(t, err, test.cmd.String())
-		assert.Equal(t, test.expected[:1], buf[:n], test.cmd.String())
+		assert.Error(t, err, msg)
+		assert.Equal(t, test.expected[:1], buf[:n], msg)
 	}
 }
