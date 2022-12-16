@@ -25,7 +25,6 @@ func (ll LogLevel) String() string {
 }
 
 type Logger interface {
-	Log(level LogLevel, v ...any)
 	Logf(level LogLevel, fmt string, v ...any)
 	SetLevel(level LogLevel)
 }
@@ -37,7 +36,6 @@ func (NullLogger) Logf(LogLevel, string, ...any) {}
 func (NullLogger) SetLevel(LogLevel)             {}
 
 type Log interface {
-	Print(v ...any)
 	Printf(fmt string, v ...any)
 }
 
@@ -48,14 +46,6 @@ type LogLogger struct {
 
 func NewLogLogger(log Log) Logger {
 	return &LogLogger{log: log, level: WARN}
-}
-
-func (l *LogLogger) Log(level LogLevel, v ...any) {
-	if level <= l.level {
-		args := []any{"[" + level.String() + "]"}
-		args = append(args, v...)
-		l.log.Print(args...)
-	}
 }
 
 func (l *LogLogger) Logf(level LogLevel, fmt string, v ...any) {

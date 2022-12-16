@@ -74,23 +74,6 @@ func (mr *MockConnMockRecorder) EnableOptionForUs(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableOptionForUs", reflect.TypeOf((*MockConn)(nil).EnableOptionForUs), arg0, arg1)
 }
 
-// Log mocks base method.
-func (m *MockConn) Log(arg0 LogLevel, arg1 ...interface{}) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "Log", varargs...)
-}
-
-// Log indicates an expected call of Log.
-func (mr *MockConnMockRecorder) Log(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Log", reflect.TypeOf((*MockConn)(nil).Log), varargs...)
-}
-
 // Logf mocks base method.
 func (m *MockConn) Logf(arg0 LogLevel, arg1 string, arg2 ...interface{}) {
 	m.ctrl.T.Helper()
@@ -324,22 +307,6 @@ func (m *MockLog) EXPECT() *MockLogMockRecorder {
 	return m.recorder
 }
 
-// Print mocks base method.
-func (m *MockLog) Print(arg0 ...interface{}) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "Print", varargs...)
-}
-
-// Print indicates an expected call of Print.
-func (mr *MockLogMockRecorder) Print(arg0 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Print", reflect.TypeOf((*MockLog)(nil).Print), arg0...)
-}
-
 // Printf mocks base method.
 func (m *MockLog) Printf(arg0 string, arg1 ...interface{}) {
 	m.ctrl.T.Helper()
@@ -378,23 +345,6 @@ func NewMockLogger(ctrl *gomock.Controller) *MockLogger {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockLogger) EXPECT() *MockLoggerMockRecorder {
 	return m.recorder
-}
-
-// Log mocks base method.
-func (m *MockLogger) Log(arg0 LogLevel, arg1 ...interface{}) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "Log", varargs...)
-}
-
-// Log indicates an expected call of Log.
-func (mr *MockLoggerMockRecorder) Log(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Log", reflect.TypeOf((*MockLogger)(nil).Log), varargs...)
 }
 
 // Logf mocks base method.

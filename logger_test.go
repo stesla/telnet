@@ -6,21 +6,6 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-func TestLog(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	log := NewMockLog(ctrl)
-	log.EXPECT().Print("[WARN]", "baz")
-	log.EXPECT().Print("[ERROR]", "quux")
-
-	logger := NewLogLogger(log)
-	logger.Log(DEBUG, "foo")
-	logger.Log(INFO, "bar")
-	logger.Log(WARN, "baz")
-	logger.Log(ERROR, "quux")
-}
-
 func TestLogf(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -41,9 +26,9 @@ func TestSetLevel(t *testing.T) {
 	defer ctrl.Finish()
 
 	log := NewMockLog(ctrl)
-	log.EXPECT().Print("[DEBUG]", "foo")
+	log.EXPECT().Printf("[%s] foo", DEBUG)
 
 	logger := NewLogLogger(log)
 	logger.SetLevel(DEBUG)
-	logger.Log(DEBUG, "foo")
+	logger.Logf(DEBUG, "foo")
 }
