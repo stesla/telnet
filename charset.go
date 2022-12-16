@@ -15,12 +15,20 @@ type CharsetOption struct {
 func (*CharsetOption) Option() byte { return Charset }
 
 func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
+	if len(buf) == 0 {
+		conn.Logf(DEBUG, "RECV: IAC SB %s IAC SE", optionByte(c.Option()))
+		return
+	}
+
+	cmd, buf := buf[0], buf[1:]
+
+	c.log(conn, "RECV: IAC SB %s %s %s IAC SE", charsetByte(cmd), string(buf))
+
 	if !c.enabledForUs {
 		c.sendCharsetRejected(conn)
 		return
 	}
 
-	cmd, buf := buf[0], buf[1:]
 	switch cmd {
 	case charsetRequest:
 		const ttable = "[TTABLE]"
@@ -43,6 +51,7 @@ func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
 		} else {
 			c.enc = encoding
 		}
+		c.log(conn, "SEND: IAC SB %s %s %s IAC SE", charsetAccepted, string(charset))
 		out := []byte{IAC, SB, Charset, charsetAccepted}
 		out = append(out, charset...)
 		out = append(out, IAC, SE)
@@ -72,6 +81,15 @@ var encodings = map[string]encoding.Encoding{
 	"US-ASCII": ASCII,
 }
 
+func (c *CharsetOption) log(conn Conn, fmt string, cmd charsetByte, v ...any) {
+	args := []any{
+		optionByte(c.Option()),
+		cmd,
+	}
+	args = append(args, v...)
+	conn.Logf(DEBUG, fmt, args...)
+}
+
 func (c *CharsetOption) selectEncoding(names [][]byte) (charset []byte, enc encoding.Encoding) {
 	for _, name := range names {
 		if e, found := encodings[string(name)]; found {
@@ -87,5 +105,6 @@ func (c *CharsetOption) selectEncoding(names [][]byte) (charset []byte, enc enco
 }
 
 func (c *CharsetOption) sendCharsetRejected(conn Conn) {
+	c.log(conn, "SEND: IAC SB %s %s IAC SE", charsetByte(charsetRejected))
 	conn.Send([]byte{IAC, SB, Charset, charsetRejected, IAC, SE})
 }

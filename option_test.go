@@ -56,9 +56,10 @@ func TestQMethodReceive(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %v", commandByte(q.receive), q.start, q.permitted)
 		*q.state, *q.allow = q.start, q.permitted
 		var called bool
-		o.receive(q.receive, func(p []byte) error {
+		o.receive(q.receive, func(cmd, opt byte) error {
 			called = true
-			assert.Equal(t, []byte{IAC, q.expected, o.code}, p, testMsg)
+			assert.Equal(t, q.expected, cmd, testMsg)
+			assert.Equal(t, o.code, opt, testMsg)
 			return nil
 		})
 		assert.Equal(t, q.expected != 0, called, testMsg)
@@ -113,10 +114,11 @@ func TestQMethodEnableOrDisable(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %s", action, who, q.start)
 		*q.state = q.start
 		called := false
-		err := q.fn(func(p []byte) error {
+		err := q.fn(func(cmd, opt byte) error {
 			called = true
 			if q.expected != 0 {
-				assert.Equal(t, []byte{IAC, q.expected, SuppressGoAhead}, p, testMsg)
+				assert.Equal(t, q.expected, cmd, testMsg)
+				assert.Equal(t, o.code, opt, testMsg)
 			}
 			return nil
 		})

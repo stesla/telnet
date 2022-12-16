@@ -1,6 +1,7 @@
 package telnet
 
 import (
+	"fmt"
 	"io"
 	"net"
 
@@ -10,6 +11,7 @@ import (
 type Conn interface {
 	io.Reader
 	io.Writer
+	Logger
 
 	AllowOption(handler OptionHandler, allowThem, allowUs bool)
 	EnableOptionForThem(option byte, enable bool) error
@@ -18,6 +20,7 @@ type Conn interface {
 
 	Send(p []byte) (n int, err error)
 	SetEncoding(encoding.Encoding)
+	SetLogger(Logger)
 	SetReadEncoding(encoding.Encoding)
 	SetWriteEncoding(encoding.Encoding)
 	SuppressGoAhead(enabled bool)
@@ -46,6 +49,8 @@ type OptionHandler interface {
 }
 
 type connection struct {
+	Logger
+
 	opts            *optionMap
 	handlers        map[byte]OptionHandler
 	r, in           io.Reader
@@ -55,6 +60,7 @@ type connection struct {
 
 func newConnection(r io.Reader, w io.Writer) *connection {
 	conn := &connection{
+		Logger:   NullLogger{},
 		opts:     newOptionMap(),
 		handlers: make(map[byte]OptionHandler),
 		r:        r,
@@ -77,10 +83,7 @@ func (c *connection) EnableOptionForThem(option byte, enable bool) error {
 	} else {
 		fn = opt.disableThem
 	}
-	return fn(func(p []byte) (err error) {
-		_, err = c.Send(p)
-		return
-	})
+	return fn(c.sendOptionCommand)
 }
 
 func (c *connection) EnableOptionForUs(option byte, enable bool) error {
@@ -91,10 +94,7 @@ func (c *connection) EnableOptionForUs(option byte, enable bool) error {
 	} else {
 		fn = opt.disableUs
 	}
-	return fn(func(p []byte) (err error) {
-		_, err = c.Send(p)
-		return
-	})
+	return fn(c.sendOptionCommand)
 }
 
 func (c *connection) OptionEnabled(option byte) (them, us bool) {
@@ -114,6 +114,10 @@ func (c *connection) Send(p []byte) (int, error) {
 func (c *connection) SetEncoding(enc encoding.Encoding) {
 	c.SetReadEncoding(enc)
 	c.SetWriteEncoding(enc)
+}
+
+func (c *connection) SetLogger(logger Logger) {
+	c.Logger = logger
 }
 
 func (c *connection) SetReadEncoding(enc encoding.Encoding) {
@@ -138,16 +142,17 @@ func (c *connection) Write(p []byte) (n int, err error) {
 }
 
 func (c *connection) handleCommand(cmd any) (err error) {
+	if s, ok := cmd.(fmt.Stringer); ok {
+		c.Logf(DEBUG, "RECV: %s", s)
+	}
+
 	switch t := cmd.(type) {
 	case *telnetGoAhead:
 		// do nothing
 	case *telnetOptionCommand:
 		them, us := c.OptionEnabled(t.opt)
 		opt := c.opts.get(byte(t.opt))
-		err = opt.receive(t.cmd, func(p []byte) (err error) {
-			_, err = c.Send(p)
-			return
-		})
+		err = opt.receive(t.cmd, c.sendOptionCommand)
 		if handler, ok := c.handlers[opt.code]; ok {
 			newThem, newUs := c.OptionEnabled(t.opt)
 			theyChanged := them != newThem
@@ -161,10 +166,18 @@ func (c *connection) handleCommand(cmd any) (err error) {
 			}
 		}
 	case *telnetSubnegotiation:
-		if handler, ok := c.handlers[t.opt]; ok && len(t.bytes) > 0 {
+		if handler, ok := c.handlers[t.opt]; ok {
 			handler.Subnegotiation(c, t.bytes)
+		} else {
+			c.Logf(DEBUG, "RECV: IAC SB %s %q IAC SE", optionByte(t.opt), t.bytes)
 		}
 	}
+	return
+}
+
+func (c *connection) sendOptionCommand(cmd, opt byte) (err error) {
+	c.Logf(DEBUG, "SEND: IAC %s %s", commandByte(cmd), optionByte(opt))
+	_, err = c.Send([]byte{IAC, cmd, opt})
 	return
 }
 

@@ -11,8 +11,17 @@ import (
 )
 
 func TestReadGoAhead(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	in := bytes.NewBuffer([]byte{'h', IAC, GA, 'i'})
 	conn := newConnection(in, nil)
+
+	logger := NewMockLogger(ctrl)
+	conn.SetLogger(logger)
+
+	logger.EXPECT().Logf(DEBUG, "RECV: %s", &telnetGoAhead{})
+
 	buf := make([]byte, 8)
 	n, err := conn.Read(buf)
 	assert.NoError(t, err)
@@ -35,6 +44,23 @@ func TestWriteGoAhead(t *testing.T) {
 	assert.Equal(t, []byte("foo"), out.Bytes())
 }
 
+func expectReceiveOptionCommand(logger *MockLogger, cmd, opt byte) {
+	logger.EXPECT().Logf(
+		DEBUG,
+		"RECV: %s",
+		&telnetOptionCommand{cmd, opt},
+	)
+}
+
+func expectSendOptionCommand(logger *MockLogger, cmd, opt byte) {
+	logger.EXPECT().Logf(
+		DEBUG,
+		"SEND: IAC %s %s",
+		commandByte(cmd),
+		optionByte(opt),
+	)
+}
+
 func TestOptionHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -47,6 +73,14 @@ func TestOptionHandler(t *testing.T) {
 		'i',
 	})
 	conn := newConnection(in, &out)
+
+	logger := NewMockLogger(ctrl)
+	conn.SetLogger(logger)
+
+	expectReceiveOptionCommand(logger, WILL, Echo)
+	expectSendOptionCommand(logger, DO, Echo)
+	expectReceiveOptionCommand(logger, DO, Echo)
+	expectSendOptionCommand(logger, WILL, Echo)
 
 	handler := NewMockOptionHandler(ctrl)
 	handler.EXPECT().Option().Return(byte(Echo))
@@ -74,6 +108,11 @@ func TestOptionHandler(t *testing.T) {
 	assert.True(t, them)
 	assert.True(t, us)
 
+	expectReceiveOptionCommand(logger, WONT, Echo)
+	expectSendOptionCommand(logger, DONT, Echo)
+	expectReceiveOptionCommand(logger, DONT, Echo)
+	expectSendOptionCommand(logger, WONT, Echo)
+
 	buf = make([]byte, 8)
 	in.Write([]byte{
 		'h',
@@ -99,8 +138,17 @@ func TestOptionHandler(t *testing.T) {
 }
 
 func TestEnableOption(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	var out bytes.Buffer
 	conn := newConnection(nil, &out)
+
+	logger := NewMockLogger(ctrl)
+	conn.SetLogger(logger)
+
+	expectSendOptionCommand(logger, DO, Echo)
+	expectSendOptionCommand(logger, WILL, Echo)
 
 	conn.EnableOptionForThem(Echo, true)
 	conn.EnableOptionForUs(Echo, true)
@@ -113,6 +161,9 @@ func TestEnableOption(t *testing.T) {
 	opt := conn.opts.get(Echo)
 	opt.them = telnetQYes
 	opt.us = telnetQYes
+
+	expectSendOptionCommand(logger, DONT, Echo)
+	expectSendOptionCommand(logger, WONT, Echo)
 
 	conn.EnableOptionForThem(Echo, false)
 	conn.EnableOptionForUs(Echo, false)
@@ -185,6 +236,9 @@ func TestSubnegotiation(t *testing.T) {
 	in := bytes.NewBuffer([]byte{IAC, SB, Echo, 'h', 'i', IAC, SE})
 	conn := newConnection(in, nil)
 
+	logger := NewMockLogger(ctrl)
+	conn.SetLogger(logger)
+
 	handler := NewMockOptionHandler(ctrl)
 	handler.EXPECT().Option().Return(byte(Echo))
 	conn.AllowOption(handler, true, true)
@@ -192,6 +246,32 @@ func TestSubnegotiation(t *testing.T) {
 	opt.them, opt.us = telnetQYes, telnetQYes
 
 	handler.EXPECT().Subnegotiation(conn, []byte("hi"))
+	buf, err := ioutil.ReadAll(conn)
+	assert.NoError(t, err)
+	assert.Empty(t, buf)
+}
+
+func TestSubnegotiationForUnsupportedOption(t *testing.T) {
+	// This case should never actually happen, as subnegotiation should only
+	// happen for options we've already negotiated. But, telnet implementations
+	// don't always play by the rules, and if we're interacting with a broken
+	// implementation, logging what they send us is good.
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	in := bytes.NewBuffer([]byte{IAC, SB, Echo, 'h', 'i', IAC, SE})
+	conn := newConnection(in, nil)
+
+	logger := NewMockLogger(ctrl)
+	logger.EXPECT().Logf(
+		DEBUG,
+		"RECV: IAC SB %s %q IAC SE",
+		optionByte(Echo),
+		[]byte("hi"),
+	)
+
+	conn.SetLogger(logger)
+
 	buf, err := ioutil.ReadAll(conn)
 	assert.NoError(t, err)
 	assert.Empty(t, buf)

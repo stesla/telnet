@@ -79,6 +79,8 @@ func (c optionByte) String() string {
 	return fmt.Sprintf("%X", uint8(c))
 }
 
+type charsetByte byte
+
 const (
 	charsetRequest = 1 + iota
 	charsetAccepted
@@ -88,9 +90,6 @@ const (
 	charsetTTableAck
 	charsetTTableNak
 )
-
-/*
-type charsetByte byte
 
 func (c charsetByte) String() string {
 	str, ok := map[charsetByte]string{
@@ -107,7 +106,6 @@ func (c charsetByte) String() string {
 	}
 	return fmt.Sprintf("%X", uint8(c))
 }
-*/
 
 type telnetGoAhead struct{}
 
@@ -126,8 +124,4 @@ func (t telnetOptionCommand) String() string {
 type telnetSubnegotiation struct {
 	opt   byte
 	bytes []byte
-}
-
-func (t telnetSubnegotiation) String() string {
-	return fmt.Sprintf("IAC SB %s %q IAC SE", optionByte(t.opt), t.bytes)
 }
