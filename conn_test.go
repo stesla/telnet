@@ -143,16 +143,16 @@ func TestEnableOption(t *testing.T) {
 	mockOption.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
 	conn.BindOption(mockOption)
 
-	mockOption.EXPECT().enableThem(conn)
+	mockOption.EXPECT().enableThem()
 	conn.EnableOptionForThem(Echo, true)
 
-	mockOption.EXPECT().enableUs(conn)
+	mockOption.EXPECT().enableUs()
 	conn.EnableOptionForUs(Echo, true)
 
-	mockOption.EXPECT().disableThem(conn)
+	mockOption.EXPECT().disableThem()
 	conn.EnableOptionForThem(Echo, false)
 
-	mockOption.EXPECT().disableUs(conn)
+	mockOption.EXPECT().disableUs()
 	conn.EnableOptionForUs(Echo, false)
 }
 

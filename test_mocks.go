@@ -351,73 +351,73 @@ func (mr *MockOptionMockRecorder) Update(arg0, arg1, arg2, arg3, arg4 interface{
 }
 
 // disableThem mocks base method.
-func (m *MockOption) disableThem(arg0 transmitter) error {
+func (m *MockOption) disableThem() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "disableThem", arg0)
+	ret := m.ctrl.Call(m, "disableThem")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // disableThem indicates an expected call of disableThem.
-func (mr *MockOptionMockRecorder) disableThem(arg0 interface{}) *gomock.Call {
+func (mr *MockOptionMockRecorder) disableThem() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "disableThem", reflect.TypeOf((*MockOption)(nil).disableThem), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "disableThem", reflect.TypeOf((*MockOption)(nil).disableThem))
 }
 
 // disableUs mocks base method.
-func (m *MockOption) disableUs(arg0 transmitter) error {
+func (m *MockOption) disableUs() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "disableUs", arg0)
+	ret := m.ctrl.Call(m, "disableUs")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // disableUs indicates an expected call of disableUs.
-func (mr *MockOptionMockRecorder) disableUs(arg0 interface{}) *gomock.Call {
+func (mr *MockOptionMockRecorder) disableUs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "disableUs", reflect.TypeOf((*MockOption)(nil).disableUs), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "disableUs", reflect.TypeOf((*MockOption)(nil).disableUs))
 }
 
 // enableThem mocks base method.
-func (m *MockOption) enableThem(arg0 transmitter) error {
+func (m *MockOption) enableThem() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "enableThem", arg0)
+	ret := m.ctrl.Call(m, "enableThem")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // enableThem indicates an expected call of enableThem.
-func (mr *MockOptionMockRecorder) enableThem(arg0 interface{}) *gomock.Call {
+func (mr *MockOptionMockRecorder) enableThem() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "enableThem", reflect.TypeOf((*MockOption)(nil).enableThem), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "enableThem", reflect.TypeOf((*MockOption)(nil).enableThem))
 }
 
 // enableUs mocks base method.
-func (m *MockOption) enableUs(arg0 transmitter) error {
+func (m *MockOption) enableUs() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "enableUs", arg0)
+	ret := m.ctrl.Call(m, "enableUs")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // enableUs indicates an expected call of enableUs.
-func (mr *MockOptionMockRecorder) enableUs(arg0 interface{}) *gomock.Call {
+func (mr *MockOptionMockRecorder) enableUs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "enableUs", reflect.TypeOf((*MockOption)(nil).enableUs), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "enableUs", reflect.TypeOf((*MockOption)(nil).enableUs))
 }
 
 // receive mocks base method.
-func (m *MockOption) receive(arg0 byte, arg1 sendfunc) error {
+func (m *MockOption) receive(arg0 byte) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "receive", arg0, arg1)
+	ret := m.ctrl.Call(m, "receive", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // receive indicates an expected call of receive.
-func (mr *MockOptionMockRecorder) receive(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockOptionMockRecorder) receive(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "receive", reflect.TypeOf((*MockOption)(nil).receive), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "receive", reflect.TypeOf((*MockOption)(nil).receive), arg0)
 }
 
 // MockLog is a mock of Log interface.

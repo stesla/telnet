@@ -12,11 +12,11 @@ type Option interface {
 	Subnegotiation([]byte)
 	Update(option byte, theyChanged, them, weChanged, us bool)
 
-	disableThem(transmitter) error
-	disableUs(transmitter) error
-	enableThem(transmitter) error
-	enableUs(transmitter) error
-	receive(c byte, send sendfunc) error
+	disableThem() error
+	disableUs() error
+	enableThem() error
+	enableUs() error
+	receive(c byte) error
 }
 
 func newOptionMap() *optionMap {
@@ -69,27 +69,21 @@ func (o *option) Subnegotiation(bytes []byte) {
 
 func (o *option) Update(byte, bool, bool, bool, bool) {}
 
-type sendfunc func(cmd, opt byte) error
-
-type transmitter interface {
-	sendOptionCommand(cmd, opt byte) error
+func (o *option) disableThem() error {
+	return o.disable(&o.them, DONT)
 }
 
-func (o *option) disableThem(tx transmitter) error {
-	return o.disable(&o.them, DONT, tx.sendOptionCommand)
+func (o *option) disableUs() error {
+	return o.disable(&o.us, WONT)
 }
 
-func (o *option) disableUs(tx transmitter) error {
-	return o.disable(&o.us, WONT, tx.sendOptionCommand)
-}
-
-func (o *option) disable(state *telnetQState, cmd byte, send sendfunc) error {
+func (o *option) disable(state *telnetQState, cmd byte) error {
 	switch *state {
 	case telnetQNo:
 		// ignore
 	case telnetQYes:
 		*state = telnetQWantNoEmpty
-		return send(cmd, o.code)
+		return o.sendOptionCommand(cmd, o.code)
 	case telnetQWantNoEmpty:
 		// ignore
 	case telnetQWantNoOpposite:
@@ -102,19 +96,18 @@ func (o *option) disable(state *telnetQState, cmd byte, send sendfunc) error {
 	return nil
 }
 
-func (o *option) enableThem(tx transmitter) error {
-	return o.enable(&o.them, DO, tx.sendOptionCommand)
+func (o *option) enableThem() error {
+	return o.enable(&o.them, DO)
 }
 
-func (o *option) enableUs(tx transmitter) error {
-	return o.enable(&o.us, WILL, tx.sendOptionCommand)
+func (o *option) enableUs() error {
+	return o.enable(&o.us, WILL)
 }
-
-func (o *option) enable(state *telnetQState, cmd byte, send sendfunc) error {
+func (o *option) enable(state *telnetQState, cmd byte) error {
 	switch *state {
 	case telnetQNo:
 		*state = telnetQWantYesEmpty
-		return send(cmd, o.code)
+		return o.sendOptionCommand(cmd, o.code)
 	case telnetQYes:
 		// ignore
 	case telnetQWantNoEmpty:
@@ -129,28 +122,28 @@ func (o *option) enable(state *telnetQState, cmd byte, send sendfunc) error {
 	return nil
 }
 
-func (o *option) receive(c byte, send sendfunc) error {
+func (o *option) receive(c byte) error {
 	switch c {
 	case DO:
-		return o.receiveEnableRequest(&o.us, o.allowUs, WILL, WONT, send)
+		return o.receiveEnableRequest(&o.us, o.allowUs, WILL, WONT)
 	case DONT:
-		return o.receiveDisableDemand(&o.us, WILL, WONT, send)
+		return o.receiveDisableDemand(&o.us, WILL, WONT)
 	case WILL:
-		return o.receiveEnableRequest(&o.them, o.allowThem, DO, DONT, send)
+		return o.receiveEnableRequest(&o.them, o.allowThem, DO, DONT)
 	case WONT:
-		return o.receiveDisableDemand(&o.them, DO, DONT, send)
+		return o.receiveDisableDemand(&o.them, DO, DONT)
 	}
 	return nil
 }
 
-func (o *option) receiveEnableRequest(state *telnetQState, allowed bool, accept, reject byte, send sendfunc) error {
+func (o *option) receiveEnableRequest(state *telnetQState, allowed bool, accept, reject byte) error {
 	switch *state {
 	case telnetQNo:
 		if allowed {
 			*state = telnetQYes
-			return send(accept, o.code)
+			return o.sendOptionCommand(accept, o.code)
 		} else {
-			return send(reject, o.code)
+			return o.sendOptionCommand(reject, o.code)
 		}
 	case telnetQYes:
 		// ignore
@@ -162,29 +155,35 @@ func (o *option) receiveEnableRequest(state *telnetQState, allowed bool, accept,
 		*state = telnetQYes
 	case telnetQWantYesOpposite:
 		*state = telnetQWantNoEmpty
-		return send(reject, o.code)
+		return o.sendOptionCommand(reject, o.code)
 	}
 	return nil
 }
 
-func (o *option) receiveDisableDemand(state *telnetQState, accept, reject byte, send sendfunc) error {
+func (o *option) receiveDisableDemand(state *telnetQState, accept, reject byte) error {
 	switch *state {
 	case telnetQNo:
 		// ignore
 	case telnetQYes:
 		*state = telnetQNo
-		return send(reject, o.code)
+		return o.sendOptionCommand(reject, o.code)
 	case telnetQWantNoEmpty:
 		*state = telnetQNo
 	case telnetQWantNoOpposite:
 		*state = telnetQWantYesEmpty
-		return send(accept, o.code)
+		return o.sendOptionCommand(accept, o.code)
 	case telnetQWantYesEmpty:
 		*state = telnetQNo
 	case telnetQWantYesOpposite:
 		*state = telnetQNo
 	}
 	return nil
+}
+
+func (o *option) sendOptionCommand(cmd, opt byte) error {
+	o.Conn().Logf(DEBUG, "SEND: IAC %s %s", commandByte(cmd), optionByte(opt))
+	_, err := o.Conn().Send([]byte{IAC, cmd, opt})
+	return err
 }
 
 type telnetQState int

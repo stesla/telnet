@@ -70,24 +70,24 @@ func (c *connection) BindOption(o Option) {
 
 func (c *connection) EnableOptionForThem(option byte, enable bool) error {
 	opt := c.opts.get(option)
-	var fn func(transmitter) error
+	var fn func() error
 	if enable {
 		fn = opt.enableThem
 	} else {
 		fn = opt.disableThem
 	}
-	return fn(c)
+	return fn()
 }
 
 func (c *connection) EnableOptionForUs(option byte, enable bool) error {
 	opt := c.opts.get(option)
-	var fn func(transmitter) error
+	var fn func() error
 	if enable {
 		fn = opt.enableUs
 	} else {
 		fn = opt.disableUs
 	}
-	return fn(c)
+	return fn()
 }
 
 func (c *connection) OptionEnabled(option byte) (them, us bool) {
@@ -145,7 +145,7 @@ func (c *connection) handleCommand(cmd any) (err error) {
 	case *telnetOptionCommand:
 		opt := c.opts.get(byte(t.opt))
 		them, us := opt.EnabledForThem(), opt.EnabledForUs()
-		err = opt.receive(t.cmd, c.sendOptionCommand)
+		err = opt.receive(t.cmd)
 		if err != nil {
 			return
 		}
