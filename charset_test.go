@@ -15,6 +15,7 @@ func withCharsetAndConn(t *testing.T, f func(Option, *MockConn)) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
+	h.Bind(conn)
 	assert.Equal(t, byte(Charset), h.Byte())
 	f(h, conn)
 }
@@ -45,7 +46,7 @@ func TestEmptySubnegotiationData(t *testing.T) {
 			"RECV: IAC SB %s IAC SE",
 			optionByte(Charset),
 		)
-		h.Subnegotiation(conn, []byte{})
+		h.Subnegotiation([]byte{})
 	})
 }
 func TestRejectIfNotEnabled(t *testing.T) {
@@ -57,7 +58,7 @@ func TestRejectIfNotEnabled(t *testing.T) {
 		data = append(data, subdata...)
 		expectRecvCharsetSubnegotiation(conn, charsetRequest, string(subdata))
 		expectCharsetRejected(conn)
-		h.Subnegotiation(conn, data)
+		h.Subnegotiation(data)
 	})
 }
 
@@ -71,14 +72,14 @@ func TestRejectWhenEnabled(t *testing.T) {
 	}
 	for _, test := range tests {
 		withCharsetAndConn(t, func(h Option, conn *MockConn) {
-			h.Update(conn, uint8(Charset), false, false, true, true)
+			h.Update(uint8(Charset), false, false, true, true)
 			expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
 			conn.EXPECT().Send(expected)
 			data := []byte{charsetRequest}
 			data = append(data, test...)
 			expectRecvCharsetSubnegotiation(conn, charsetRequest, test)
 			expectCharsetRejected(conn)
-			h.Subnegotiation(conn, data)
+			h.Subnegotiation(data)
 		})
 	}
 }
@@ -104,11 +105,12 @@ func TestAcceptEncoding(t *testing.T) {
 			defer ctrl.Finish()
 			co := h.(*CharsetOption)
 			mockOption := NewMockOption(ctrl)
+			mockOption.EXPECT().Conn().Return(conn).AnyTimes()
 			mockOption.EXPECT().Byte().Return(byte(Charset)).AnyTimes()
 			mockOption.EXPECT().EnabledForUs().Return(true).AnyTimes()
 			co.Option = mockOption
 
-			h.Update(conn, uint8(Charset), false, false, true, true)
+			h.Update(uint8(Charset), false, false, true, true)
 			expected := []byte{IAC, SB, Charset, charsetAccepted}
 			expected = append(expected, test.encodingName...)
 			expected = append(expected, IAC, SE)
@@ -129,7 +131,7 @@ func TestAcceptEncoding(t *testing.T) {
 			)
 			data := []byte{charsetRequest}
 			data = append(data, test.subnegotiationData...)
-			h.Subnegotiation(conn, data)
+			h.Subnegotiation(data)
 
 			assert.Equal(t, test.encoding, co.enc)
 		})
@@ -162,13 +164,14 @@ func TestUpdateTransmitBinary(t *testing.T) {
 			co := h.(*CharsetOption)
 			co.enc = test.enc
 			mockOption := NewMockOption(ctrl)
+			mockOption.EXPECT().Conn().Return(conn).AnyTimes()
 			mockOption.EXPECT().EnabledForUs().Return(test.enabled).AnyTimes()
 			co.Option = mockOption
 
 			if test.expected != nil {
 				conn.EXPECT().SetEncoding(test.expected)
 			}
-			h.Update(conn, TransmitBinary, test.theyChanged, test.them, test.weChanged, test.us)
+			h.Update(TransmitBinary, test.theyChanged, test.them, test.weChanged, test.us)
 		})
 	}
 }

@@ -1,12 +1,16 @@
 package telnet
 
+import "math"
+
 type Option interface {
 	Allow(them, us bool)
+	Bind(Conn)
 	Byte() byte
+	Conn() Conn
 	EnabledForThem() bool
 	EnabledForUs() bool
-	Subnegotiation(Conn, []byte)
-	Update(c Conn, option byte, theyChanged, them, weChanged, us bool)
+	Subnegotiation([]byte)
+	Update(option byte, theyChanged, them, weChanged, us bool)
 
 	disableThem(transmitter) error
 	disableUs(transmitter) error
@@ -16,9 +20,11 @@ type Option interface {
 }
 
 func newOptionMap() *optionMap {
-	return &optionMap{
-		m: make(map[byte]Option),
+	m := make(map[byte]Option)
+	for b := byte(0); b < math.MaxUint8; b++ {
+		m[b] = NewOption(b)
 	}
+	return &optionMap{m: m}
 }
 
 type optionMap struct {
@@ -31,13 +37,8 @@ func (m *optionMap) each(fn func(Option)) {
 	}
 }
 
-func (m *optionMap) get(c byte) (opt Option) {
-	opt, ok := m.m[c]
-	if !ok {
-		opt = NewOption(c)
-		m.m[c] = opt
-	}
-	return
+func (m *optionMap) get(c byte) Option {
+	return m.m[c]
 }
 
 func (m *optionMap) put(o Option) {
@@ -45,6 +46,7 @@ func (m *optionMap) put(o Option) {
 }
 
 type option struct {
+	conn               Conn
 	code               byte
 	allowUs, allowThem bool
 	us, them           telnetQState
@@ -55,14 +57,17 @@ func NewOption(c byte) *option {
 }
 
 func (o *option) Allow(them, us bool)  { o.allowThem, o.allowUs = them, us }
+func (o *option) Bind(conn Conn)       { o.conn = conn }
 func (o *option) Byte() byte           { return o.code }
+func (o *option) Conn() Conn           { return o.conn }
 func (o *option) EnabledForThem() bool { return telnetQYes == o.them }
 func (o *option) EnabledForUs() bool   { return telnetQYes == o.us }
 
-func (o *option) Subnegotiation(c Conn, bytes []byte) {
-	c.Logf(DEBUG, "RECV: IAC SB %s %q IAC SE", optionByte(o.Byte()), bytes)
+func (o *option) Subnegotiation(bytes []byte) {
+	o.conn.Logf(DEBUG, "RECV: IAC SB %s %q IAC SE", optionByte(o.Byte()), bytes)
 }
-func (o *option) Update(Conn, byte, bool, bool, bool, bool) {}
+
+func (o *option) Update(byte, bool, bool, bool, bool) {}
 
 type sendfunc func(cmd, opt byte) error
 

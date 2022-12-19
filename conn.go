@@ -13,6 +13,7 @@ type Conn interface {
 	io.Writer
 	Logger
 
+	BindOption(o Option)
 	EnableOptionForThem(option byte, enable bool) error
 	EnableOptionForUs(option byte, enable bool) error
 	OptionEnabled(option byte) (them, us bool)
@@ -20,7 +21,6 @@ type Conn interface {
 	Send(p []byte) (n int, err error)
 	SetEncoding(encoding.Encoding)
 	SetLogger(Logger)
-	SetOption(o Option)
 	SetReadEncoding(encoding.Encoding)
 	SetWriteEncoding(encoding.Encoding)
 	SuppressGoAhead(enabled bool)
@@ -58,11 +58,13 @@ func newConnection(r io.Reader, w io.Writer) *connection {
 		r:      r,
 		w:      w,
 	}
+	conn.opts.each(func(o Option) { o.Bind(conn) })
 	conn.SetEncoding(ASCII)
 	return conn
 }
 
-func (c *connection) SetOption(o Option) {
+func (c *connection) BindOption(o Option) {
+	o.Bind(c)
 	c.opts.put(o)
 }
 
@@ -151,11 +153,11 @@ func (c *connection) handleCommand(cmd any) (err error) {
 		theyChanged := them != newThem
 		weChanged := us != newUs
 		c.opts.each(func(o Option) {
-			o.Update(c, opt.Byte(), theyChanged, newThem, weChanged, newUs)
+			o.Update(opt.Byte(), theyChanged, newThem, weChanged, newUs)
 		})
 	case *telnetSubnegotiation:
 		option := c.opts.get(t.opt)
-		option.Subnegotiation(c, t.bytes)
+		option.Subnegotiation(t.bytes)
 	}
 	return
 }
@@ -174,10 +176,10 @@ func NewSuppressGoAheadOption() *SuppressGoAheadOption {
 	return &SuppressGoAheadOption{Option: NewOption(SuppressGoAhead)}
 }
 
-func (SuppressGoAheadOption) Subnegotiation(Conn, []byte) {}
+func (o *SuppressGoAheadOption) Subnegotiation([]byte) {}
 
-func (SuppressGoAheadOption) Update(c Conn, option byte, theyChanged, them, weChanged, us bool) {
+func (o *SuppressGoAheadOption) Update(option byte, theyChanged, them, weChanged, us bool) {
 	if SuppressGoAhead == option && weChanged {
-		c.SuppressGoAhead(us)
+		o.Conn().SuppressGoAhead(us)
 	}
 }

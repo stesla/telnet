@@ -24,14 +24,15 @@ func TestTransmitBinaryOption(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
+	h.Bind(conn)
 
 	assert.Equal(t, byte(TransmitBinary), h.Byte())
 
 	conn.EXPECT().SetReadEncoding(ASCII)
 	conn.EXPECT().SetWriteEncoding(ASCII)
-	h.Update(conn, uint8(TransmitBinary), true, false, true, false)
+	h.Update(uint8(TransmitBinary), true, false, true, false)
 
 	conn.EXPECT().SetReadEncoding(Binary)
 	conn.EXPECT().SetWriteEncoding(Binary)
-	h.Update(conn, uint8(TransmitBinary), true, true, true, true)
+	h.Update(uint8(TransmitBinary), true, true, true, true)
 }

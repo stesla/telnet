@@ -84,15 +84,16 @@ func TestOption(t *testing.T) {
 
 	option := NewOption(Echo)
 	option.Allow(true, true)
-	conn.SetOption(option)
+	conn.BindOption(option)
 
 	option2 := NewMockOption(ctrl)
+	option2.EXPECT().Bind(conn)
 	option2.EXPECT().Byte().Return(byte(TransmitBinary)).AnyTimes()
-	conn.SetOption(option2)
+	conn.BindOption(option2)
 
 	buf := make([]byte, 8)
-	option2.EXPECT().Update(conn, uint8(Echo), true, true, false, false)
-	option2.EXPECT().Update(conn, uint8(Echo), false, true, true, true)
+	option2.EXPECT().Update(uint8(Echo), true, true, false, false)
+	option2.EXPECT().Update(uint8(Echo), false, true, true, true)
 	n, err := conn.Read(buf)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
@@ -117,8 +118,8 @@ func TestOption(t *testing.T) {
 		'i',
 	})
 	out.Reset()
-	option2.EXPECT().Update(conn, uint8(Echo), true, false, false, true)
-	option2.EXPECT().Update(conn, uint8(Echo), false, false, true, false)
+	option2.EXPECT().Update(uint8(Echo), true, false, false, true)
+	option2.EXPECT().Update(uint8(Echo), false, false, true, false)
 	n, err = conn.Read(buf)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
@@ -138,8 +139,9 @@ func TestEnableOption(t *testing.T) {
 	conn := newConnection(nil, nil)
 
 	mockOption := NewMockOption(ctrl)
+	mockOption.EXPECT().Bind(conn)
 	mockOption.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
-	conn.SetOption(mockOption)
+	conn.BindOption(mockOption)
 
 	mockOption.EXPECT().enableThem(conn)
 	conn.EnableOptionForThem(Echo, true)
@@ -236,9 +238,10 @@ func TestSubnegotiation(t *testing.T) {
 
 	option := NewMockOption(ctrl)
 	option.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
-	conn.SetOption(option)
+	option.EXPECT().Bind(conn)
+	conn.BindOption(option)
 
-	option.EXPECT().Subnegotiation(conn, []byte("hi"))
+	option.EXPECT().Subnegotiation([]byte("hi"))
 	buf, err := ioutil.ReadAll(conn)
 	assert.NoError(t, err)
 	assert.Empty(t, buf)
@@ -275,14 +278,15 @@ func TestSuppresGoAhead(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
+	h.Bind(conn)
 
 	assert.Equal(t, byte(SuppressGoAhead), h.Byte())
 
 	conn.EXPECT().SuppressGoAhead(true)
-	h.Update(conn, uint8(SuppressGoAhead), false, false, true, true)
+	h.Update(uint8(SuppressGoAhead), false, false, true, true)
 
 	conn.EXPECT().SuppressGoAhead(false)
-	h.Update(conn, uint8(SuppressGoAhead), true, true, true, false)
+	h.Update(uint8(SuppressGoAhead), true, true, true, false)
 
-	h.Update(conn, uint8(Echo), true, true, true, true)
+	h.Update(uint8(Echo), true, true, true, true)
 }

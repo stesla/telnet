@@ -34,6 +34,18 @@ func (m *MockConn) EXPECT() *MockConnMockRecorder {
 	return m.recorder
 }
 
+// BindOption mocks base method.
+func (m *MockConn) BindOption(arg0 Option) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "BindOption", arg0)
+}
+
+// BindOption indicates an expected call of BindOption.
+func (mr *MockConnMockRecorder) BindOption(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BindOption", reflect.TypeOf((*MockConn)(nil).BindOption), arg0)
+}
+
 // EnableOptionForThem mocks base method.
 func (m *MockConn) EnableOptionForThem(arg0 byte, arg1 bool) error {
 	m.ctrl.T.Helper()
@@ -160,18 +172,6 @@ func (mr *MockConnMockRecorder) SetLogger(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogger", reflect.TypeOf((*MockConn)(nil).SetLogger), arg0)
 }
 
-// SetOption mocks base method.
-func (m *MockConn) SetOption(arg0 Option) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetOption", arg0)
-}
-
-// SetOption indicates an expected call of SetOption.
-func (mr *MockConnMockRecorder) SetOption(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOption", reflect.TypeOf((*MockConn)(nil).SetOption), arg0)
-}
-
 // SetReadEncoding mocks base method.
 func (m *MockConn) SetReadEncoding(arg0 encoding.Encoding) {
 	m.ctrl.T.Helper()
@@ -258,6 +258,18 @@ func (mr *MockOptionMockRecorder) Allow(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Allow", reflect.TypeOf((*MockOption)(nil).Allow), arg0, arg1)
 }
 
+// Bind mocks base method.
+func (m *MockOption) Bind(arg0 Conn) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Bind", arg0)
+}
+
+// Bind indicates an expected call of Bind.
+func (mr *MockOptionMockRecorder) Bind(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bind", reflect.TypeOf((*MockOption)(nil).Bind), arg0)
+}
+
 // Byte mocks base method.
 func (m *MockOption) Byte() byte {
 	m.ctrl.T.Helper()
@@ -270,6 +282,20 @@ func (m *MockOption) Byte() byte {
 func (mr *MockOptionMockRecorder) Byte() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Byte", reflect.TypeOf((*MockOption)(nil).Byte))
+}
+
+// Conn mocks base method.
+func (m *MockOption) Conn() Conn {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Conn")
+	ret0, _ := ret[0].(Conn)
+	return ret0
+}
+
+// Conn indicates an expected call of Conn.
+func (mr *MockOptionMockRecorder) Conn() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Conn", reflect.TypeOf((*MockOption)(nil).Conn))
 }
 
 // EnabledForThem mocks base method.
@@ -301,27 +327,27 @@ func (mr *MockOptionMockRecorder) EnabledForUs() *gomock.Call {
 }
 
 // Subnegotiation mocks base method.
-func (m *MockOption) Subnegotiation(arg0 Conn, arg1 []byte) {
+func (m *MockOption) Subnegotiation(arg0 []byte) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Subnegotiation", arg0, arg1)
+	m.ctrl.Call(m, "Subnegotiation", arg0)
 }
 
 // Subnegotiation indicates an expected call of Subnegotiation.
-func (mr *MockOptionMockRecorder) Subnegotiation(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockOptionMockRecorder) Subnegotiation(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subnegotiation", reflect.TypeOf((*MockOption)(nil).Subnegotiation), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subnegotiation", reflect.TypeOf((*MockOption)(nil).Subnegotiation), arg0)
 }
 
 // Update mocks base method.
-func (m *MockOption) Update(arg0 Conn, arg1 byte, arg2, arg3, arg4, arg5 bool) {
+func (m *MockOption) Update(arg0 byte, arg1, arg2, arg3, arg4 bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Update", arg0, arg1, arg2, arg3, arg4, arg5)
+	m.ctrl.Call(m, "Update", arg0, arg1, arg2, arg3, arg4)
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockOptionMockRecorder) Update(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+func (mr *MockOptionMockRecorder) Update(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOption)(nil).Update), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOption)(nil).Update), arg0, arg1, arg2, arg3, arg4)
 }
 
 // disableThem mocks base method.

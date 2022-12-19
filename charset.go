@@ -16,7 +16,9 @@ func NewCharsetOption() *CharsetOption {
 	return &CharsetOption{Option: NewOption(Charset)}
 }
 
-func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
+func (c *CharsetOption) Subnegotiation(buf []byte) {
+	conn := c.Conn()
+
 	if len(buf) == 0 {
 		conn.Logf(DEBUG, "RECV: IAC SB %s IAC SE", optionByte(c.Byte()))
 		return
@@ -60,14 +62,15 @@ func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
 		conn.Send(out)
 
 		them, us := conn.OptionEnabled(TransmitBinary)
-		c.Update(conn, TransmitBinary, false, them, false, us)
+		c.Update(TransmitBinary, false, them, false, us)
 	}
 }
 
-func (c *CharsetOption) Update(conn Conn, option byte, theyChanged, them, weChanged, us bool) {
+func (c *CharsetOption) Update(option byte, theyChanged, them, weChanged, us bool) {
 	switch option {
 	case TransmitBinary:
 		if c.EnabledForUs() && c.enc != nil {
+			conn := c.Conn()
 			if them && us {
 				conn.SetEncoding(c.enc)
 			} else {
