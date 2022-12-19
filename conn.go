@@ -143,7 +143,7 @@ func (c *connection) handleCommand(cmd any) (err error) {
 	case *telnetOptionCommand:
 		opt := c.opts.get(byte(t.opt))
 		them, us := opt.EnabledForThem(), opt.EnabledForUs()
-		err = opt.Receive(t.cmd, c.sendOptionCommand)
+		err = opt.receive(t.cmd, c.sendOptionCommand)
 		if err != nil {
 			return
 		}

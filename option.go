@@ -5,7 +5,6 @@ type Option interface {
 	Byte() byte
 	EnabledForThem() bool
 	EnabledForUs() bool
-	Receive(c byte, send sendfunc) error
 	Subnegotiation(Conn, []byte)
 	Update(c Conn, option byte, theyChanged, them, weChanged, us bool)
 
@@ -13,6 +12,7 @@ type Option interface {
 	disableUs(transmitter) error
 	enableThem(transmitter) error
 	enableUs(transmitter) error
+	receive(c byte, send sendfunc) error
 }
 
 func newOptionMap() *optionMap {
@@ -124,7 +124,7 @@ func (o *option) enable(state *telnetQState, cmd byte, send sendfunc) error {
 	return nil
 }
 
-func (o *option) Receive(c byte, send sendfunc) error {
+func (o *option) receive(c byte, send sendfunc) error {
 	switch c {
 	case DO:
 		return o.receiveEnableRequest(&o.us, o.allowUs, WILL, WONT, send)

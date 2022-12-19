@@ -300,20 +300,6 @@ func (mr *MockOptionMockRecorder) EnabledForUs() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnabledForUs", reflect.TypeOf((*MockOption)(nil).EnabledForUs))
 }
 
-// Receive mocks base method.
-func (m *MockOption) Receive(arg0 byte, arg1 sendfunc) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Receive", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Receive indicates an expected call of Receive.
-func (mr *MockOptionMockRecorder) Receive(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Receive", reflect.TypeOf((*MockOption)(nil).Receive), arg0, arg1)
-}
-
 // Subnegotiation mocks base method.
 func (m *MockOption) Subnegotiation(arg0 Conn, arg1 []byte) {
 	m.ctrl.T.Helper()
@@ -392,6 +378,20 @@ func (m *MockOption) enableUs(arg0 transmitter) error {
 func (mr *MockOptionMockRecorder) enableUs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "enableUs", reflect.TypeOf((*MockOption)(nil).enableUs), arg0)
+}
+
+// receive mocks base method.
+func (m *MockOption) receive(arg0 byte, arg1 sendfunc) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "receive", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// receive indicates an expected call of receive.
+func (mr *MockOptionMockRecorder) receive(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "receive", reflect.TypeOf((*MockOption)(nil).receive), arg0, arg1)
 }
 
 // MockLog is a mock of Log interface.

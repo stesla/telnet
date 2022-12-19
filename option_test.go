@@ -56,7 +56,7 @@ func TestQMethodReceive(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %v", commandByte(q.receive), q.start, q.permitted)
 		*q.state, *q.allow = q.start, q.permitted
 		var called bool
-		o.Receive(q.receive, func(cmd, opt byte) error {
+		o.receive(q.receive, func(cmd, opt byte) error {
 			called = true
 			assert.Equal(t, q.expected, cmd, testMsg)
 			assert.Equal(t, o.code, opt, testMsg)
