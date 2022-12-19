@@ -10,11 +10,12 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
-func withCharsetAndConn(t *testing.T, f func(OptionHandler, *MockConn)) {
-	var h OptionHandler = &CharsetOption{}
+func withCharsetAndConn(t *testing.T, f func(Option, *MockConn)) {
+	var h Option = NewCharsetOption()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
+	assert.Equal(t, byte(Charset), h.Byte())
 	f(h, conn)
 }
 
@@ -38,7 +39,7 @@ func expectCharsetRejected(conn *MockConn) {
 }
 
 func TestEmptySubnegotiationData(t *testing.T) {
-	withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
+	withCharsetAndConn(t, func(h Option, conn *MockConn) {
 		conn.EXPECT().Logf(
 			DEBUG,
 			"RECV: IAC SB %s IAC SE",
@@ -48,7 +49,7 @@ func TestEmptySubnegotiationData(t *testing.T) {
 	})
 }
 func TestRejectIfNotEnabled(t *testing.T) {
-	withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
+	withCharsetAndConn(t, func(h Option, conn *MockConn) {
 		expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
 		conn.EXPECT().Send(expected)
 		data := []byte{charsetRequest}
@@ -69,7 +70,7 @@ func TestRejectWhenEnabled(t *testing.T) {
 		";BOGUS;ENCODING;NAMES",
 	}
 	for _, test := range tests {
-		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
+		withCharsetAndConn(t, func(h Option, conn *MockConn) {
 			h.Update(conn, uint8(Charset), false, false, true, true)
 			expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
 			conn.EXPECT().Send(expected)
@@ -98,7 +99,15 @@ func TestAcceptEncoding(t *testing.T) {
 		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", true, false, false},
 	}
 	for _, test := range tests {
-		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
+		withCharsetAndConn(t, func(h Option, conn *MockConn) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			co := h.(*CharsetOption)
+			mockOption := NewMockOption(ctrl)
+			mockOption.EXPECT().Byte().Return(byte(Charset)).AnyTimes()
+			mockOption.EXPECT().EnabledForUs().Return(true).AnyTimes()
+			co.Option = mockOption
+
 			h.Update(conn, uint8(Charset), false, false, true, true)
 			expected := []byte{IAC, SB, Charset, charsetAccepted}
 			expected = append(expected, test.encodingName...)
@@ -122,29 +131,7 @@ func TestAcceptEncoding(t *testing.T) {
 			data = append(data, test.subnegotiationData...)
 			h.Subnegotiation(conn, data)
 
-			co := h.(*CharsetOption)
 			assert.Equal(t, test.encoding, co.enc)
-		})
-	}
-}
-
-func TestUpdateCharset(t *testing.T) {
-	var tests = []struct {
-		theyChanged, them                      bool
-		weChanged, us                          bool
-		expectedThemEnabled, expectedUsEnabled bool
-	}{
-		{false, false, false, false, false, false},
-		{false, true, false, true, true, true},
-		{true, false, true, false, false, false},
-		{true, false, true, true, false, true},
-	}
-	for _, test := range tests {
-		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
-			h.Update(conn, Charset, test.theyChanged, test.them, test.weChanged, test.us)
-			co := h.(*CharsetOption)
-			assert.Equal(t, test.expectedThemEnabled, co.enabledForThem)
-			assert.Equal(t, test.expectedUsEnabled, co.enabledForUs)
 		})
 	}
 }
@@ -169,13 +156,14 @@ func TestUpdateTransmitBinary(t *testing.T) {
 		{false, false, false, false, false, unicode.UTF8, nil},
 	}
 	for _, test := range tests {
-		withCharsetAndConn(t, func(h OptionHandler, conn *MockConn) {
-			if test.enabled {
-				h.Update(conn, uint8(Charset), false, false, true, true)
-			}
-
+		withCharsetAndConn(t, func(h Option, conn *MockConn) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 			co := h.(*CharsetOption)
 			co.enc = test.enc
+			mockOption := NewMockOption(ctrl)
+			mockOption.EXPECT().EnabledForUs().Return(test.enabled).AnyTimes()
+			co.Option = mockOption
 
 			if test.expected != nil {
 				conn.EXPECT().SetEncoding(test.expected)

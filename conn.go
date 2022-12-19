@@ -13,7 +13,7 @@ type Conn interface {
 	io.Writer
 	Logger
 
-	AllowOption(handler OptionHandler, allowThem, allowUs bool)
+	AllowOption(o Option, allowThem, allowUs bool)
 	EnableOptionForThem(option byte, enable bool) error
 	EnableOptionForUs(option byte, enable bool) error
 	OptionEnabled(option byte) (them, us bool)
@@ -42,17 +42,10 @@ func Server(conn net.Conn) Conn {
 	return newConnection(conn, conn)
 }
 
-type OptionHandler interface {
-	Option() byte
-	Subnegotiation(Conn, []byte)
-	Update(c Conn, option byte, theyChanged, them, weChanged, us bool)
-}
-
 type connection struct {
 	Logger
 
 	opts            *optionMap
-	handlers        map[byte]OptionHandler
 	r, in           io.Reader
 	w, out          io.Writer
 	suppressGoAhead bool
@@ -60,46 +53,45 @@ type connection struct {
 
 func newConnection(r io.Reader, w io.Writer) *connection {
 	conn := &connection{
-		Logger:   NullLogger{},
-		opts:     newOptionMap(),
-		handlers: make(map[byte]OptionHandler),
-		r:        r,
-		w:        w,
+		Logger: NullLogger{},
+		opts:   newOptionMap(),
+		r:      r,
+		w:      w,
 	}
 	conn.SetEncoding(ASCII)
 	return conn
 }
 
-func (c *connection) AllowOption(handler OptionHandler, allowThem, allowUs bool) {
-	opt := c.opts.get(handler.Option())
-	c.handlers[opt.code], opt.allowThem, opt.allowUs = handler, allowThem, allowUs
+func (c *connection) AllowOption(o Option, allowThem, allowUs bool) {
+	o.allow(allowThem, allowUs)
+	c.opts.put(o)
 }
 
 func (c *connection) EnableOptionForThem(option byte, enable bool) error {
 	opt := c.opts.get(option)
-	var fn func(sendfunc) error
+	var fn func(transmitter) error
 	if enable {
 		fn = opt.enableThem
 	} else {
 		fn = opt.disableThem
 	}
-	return fn(c.sendOptionCommand)
+	return fn(c)
 }
 
 func (c *connection) EnableOptionForUs(option byte, enable bool) error {
 	opt := c.opts.get(option)
-	var fn func(sendfunc) error
+	var fn func(transmitter) error
 	if enable {
 		fn = opt.enableUs
 	} else {
 		fn = opt.disableUs
 	}
-	return fn(c.sendOptionCommand)
+	return fn(c)
 }
 
 func (c *connection) OptionEnabled(option byte) (them, us bool) {
 	opt := c.opts.get(option)
-	them, us = opt.enabledForThem(), opt.enabledForUs()
+	them, us = opt.EnabledForThem(), opt.EnabledForUs()
 	return
 }
 
@@ -150,27 +142,21 @@ func (c *connection) handleCommand(cmd any) (err error) {
 	case *telnetGoAhead:
 		// do nothing
 	case *telnetOptionCommand:
-		them, us := c.OptionEnabled(t.opt)
 		opt := c.opts.get(byte(t.opt))
-		err = opt.receive(t.cmd, c.sendOptionCommand)
-		if handler, ok := c.handlers[opt.code]; ok {
-			newThem, newUs := c.OptionEnabled(t.opt)
-			theyChanged := them != newThem
-			weChanged := us != newUs
-			handler.Update(c, opt.code, theyChanged, newThem, weChanged, newUs)
-			for o, h := range c.handlers {
-				if o == opt.code {
-					continue
-				}
-				h.Update(c, opt.code, theyChanged, newThem, weChanged, newUs)
-			}
+		them, us := opt.EnabledForThem(), opt.EnabledForUs()
+		err = opt.Receive(t.cmd, c.sendOptionCommand)
+		if err != nil {
+			return
 		}
+		newThem, newUs := opt.EnabledForThem(), opt.EnabledForUs()
+		theyChanged := them != newThem
+		weChanged := us != newUs
+		c.opts.each(func(o Option) {
+			o.Update(c, opt.Byte(), theyChanged, newThem, weChanged, newUs)
+		})
 	case *telnetSubnegotiation:
-		if handler, ok := c.handlers[t.opt]; ok {
-			handler.Subnegotiation(c, t.bytes)
-		} else {
-			c.Logf(DEBUG, "RECV: IAC SB %s %q IAC SE", optionByte(t.opt), t.bytes)
-		}
+		option := c.opts.get(t.opt)
+		option.Subnegotiation(c, t.bytes)
 	}
 	return
 }
@@ -181,9 +167,13 @@ func (c *connection) sendOptionCommand(cmd, opt byte) (err error) {
 	return
 }
 
-type SuppressGoAheadOption struct{}
+type SuppressGoAheadOption struct {
+	Option
+}
 
-func (SuppressGoAheadOption) Option() byte { return SuppressGoAhead }
+func NewSuppressGoAheadOption() *SuppressGoAheadOption {
+	return &SuppressGoAheadOption{Option: NewOption(SuppressGoAhead)}
+}
 
 func (SuppressGoAheadOption) Subnegotiation(Conn, []byte) {}
 

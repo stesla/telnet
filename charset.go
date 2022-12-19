@@ -8,15 +8,17 @@ import (
 )
 
 type CharsetOption struct {
-	enabledForThem, enabledForUs bool
-	enc                          encoding.Encoding
+	Option
+	enc encoding.Encoding
 }
 
-func (*CharsetOption) Option() byte { return Charset }
+func NewCharsetOption() *CharsetOption {
+	return &CharsetOption{Option: NewOption(Charset)}
+}
 
 func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
 	if len(buf) == 0 {
-		conn.Logf(DEBUG, "RECV: IAC SB %s IAC SE", optionByte(c.Option()))
+		conn.Logf(DEBUG, "RECV: IAC SB %s IAC SE", optionByte(c.Byte()))
 		return
 	}
 
@@ -24,7 +26,7 @@ func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
 
 	c.log(conn, "RECV: IAC SB %s %s %s IAC SE", charsetByte(cmd), string(buf))
 
-	if !c.enabledForUs {
+	if !c.EnabledForUs() {
 		c.sendCharsetRejected(conn)
 		return
 	}
@@ -64,10 +66,8 @@ func (c *CharsetOption) Subnegotiation(conn Conn, buf []byte) {
 
 func (c *CharsetOption) Update(conn Conn, option byte, theyChanged, them, weChanged, us bool) {
 	switch option {
-	case Charset:
-		c.enabledForThem, c.enabledForUs = them, us
 	case TransmitBinary:
-		if c.enabledForUs && c.enc != nil {
+		if c.EnabledForUs() && c.enc != nil {
 			if them && us {
 				conn.SetEncoding(c.enc)
 			} else {
@@ -83,7 +83,7 @@ var encodings = map[string]encoding.Encoding{
 
 func (c *CharsetOption) log(conn Conn, fmt string, cmd charsetByte, v ...any) {
 	args := []any{
-		optionByte(c.Option()),
+		optionByte(c.Byte()),
 		cmd,
 	}
 	args = append(args, v...)

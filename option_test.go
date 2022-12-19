@@ -19,11 +19,11 @@ type qMethodTest struct {
 	allow   *bool
 
 	// for the enable/disable test
-	fn func(sendfunc) error
+	fn func(transmitter) error
 }
 
 func TestQMethodReceive(t *testing.T) {
-	o := newOption(SuppressGoAhead)
+	o := NewOption(SuppressGoAhead)
 	tests := []*qMethodTest{
 		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQNo, permitted: false, end: telnetQNo, expected: WONT},
 		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQNo, permitted: true, end: telnetQYes, expected: WILL},
@@ -56,7 +56,7 @@ func TestQMethodReceive(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %v", commandByte(q.receive), q.start, q.permitted)
 		*q.state, *q.allow = q.start, q.permitted
 		var called bool
-		o.receive(q.receive, func(cmd, opt byte) error {
+		o.Receive(q.receive, func(cmd, opt byte) error {
 			called = true
 			assert.Equal(t, q.expected, cmd, testMsg)
 			assert.Equal(t, o.code, opt, testMsg)
@@ -68,7 +68,7 @@ func TestQMethodReceive(t *testing.T) {
 }
 
 func TestQMethodEnableOrDisable(t *testing.T) {
-	o := newOption(SuppressGoAhead)
+	o := NewOption(SuppressGoAhead)
 	disableThem := fmt.Sprintf("%p", o.disableThem)
 	disableUs := fmt.Sprintf("%p", o.disableUs)
 	enableThem := fmt.Sprintf("%p", o.enableThem)
@@ -114,17 +114,25 @@ func TestQMethodEnableOrDisable(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %s", action, who, q.start)
 		*q.state = q.start
 		called := false
-		err := q.fn(func(cmd, opt byte) error {
+		err := q.fn(&testTransmitter{func(cmd, opt byte) error {
 			called = true
 			if q.expected != 0 {
 				assert.Equal(t, q.expected, cmd, testMsg)
 				assert.Equal(t, o.code, opt, testMsg)
 			}
 			return nil
-		})
+		}})
 		if q.expected != 0 {
 			assert.True(t, called, testMsg)
 		}
 		assert.NoError(t, err, testMsg)
 	}
+}
+
+type testTransmitter struct {
+	fn func(cmd, opt byte) error
+}
+
+func (t *testTransmitter) sendOptionCommand(cmd, opt byte) error {
+	return t.fn(cmd, opt)
 }

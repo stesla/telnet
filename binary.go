@@ -34,9 +34,13 @@ func (e binaryEncoding) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, 
 
 func (a binaryEncoding) Reset() {}
 
-type TransmitBinaryOption struct{}
+type TransmitBinaryOption struct {
+	Option
+}
 
-func (t *TransmitBinaryOption) Option() byte { return TransmitBinary }
+func NewTransmitBinaryOption() *TransmitBinaryOption {
+	return &TransmitBinaryOption{Option: NewOption(TransmitBinary)}
+}
 
 func (t *TransmitBinaryOption) Subnegotiation(_ Conn, _ []byte) {}
 

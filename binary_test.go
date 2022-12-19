@@ -20,11 +20,12 @@ func TestUseBinary(t *testing.T) {
 }
 
 func TestTransmitBinaryOption(t *testing.T) {
-	var h OptionHandler = &TransmitBinaryOption{}
+	var h Option = NewTransmitBinaryOption()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
 	conn := NewMockConn(ctrl)
+
+	assert.Equal(t, byte(TransmitBinary), h.Byte())
 
 	conn.EXPECT().SetReadEncoding(ASCII)
 	conn.EXPECT().SetWriteEncoding(ASCII)
