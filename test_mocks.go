@@ -34,18 +34,6 @@ func (m *MockConn) EXPECT() *MockConnMockRecorder {
 	return m.recorder
 }
 
-// AllowOption mocks base method.
-func (m *MockConn) AllowOption(arg0 Option, arg1, arg2 bool) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AllowOption", arg0, arg1, arg2)
-}
-
-// AllowOption indicates an expected call of AllowOption.
-func (mr *MockConnMockRecorder) AllowOption(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AllowOption", reflect.TypeOf((*MockConn)(nil).AllowOption), arg0, arg1, arg2)
-}
-
 // EnableOptionForThem mocks base method.
 func (m *MockConn) EnableOptionForThem(arg0 byte, arg1 bool) error {
 	m.ctrl.T.Helper()
@@ -172,6 +160,18 @@ func (mr *MockConnMockRecorder) SetLogger(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogger", reflect.TypeOf((*MockConn)(nil).SetLogger), arg0)
 }
 
+// SetOption mocks base method.
+func (m *MockConn) SetOption(arg0 Option) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetOption", arg0)
+}
+
+// SetOption indicates an expected call of SetOption.
+func (mr *MockConnMockRecorder) SetOption(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOption", reflect.TypeOf((*MockConn)(nil).SetOption), arg0)
+}
+
 // SetReadEncoding mocks base method.
 func (m *MockConn) SetReadEncoding(arg0 encoding.Encoding) {
 	m.ctrl.T.Helper()
@@ -244,6 +244,18 @@ func NewMockOption(ctrl *gomock.Controller) *MockOption {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockOption) EXPECT() *MockOptionMockRecorder {
 	return m.recorder
+}
+
+// Allow mocks base method.
+func (m *MockOption) Allow(arg0, arg1 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Allow", arg0, arg1)
+}
+
+// Allow indicates an expected call of Allow.
+func (mr *MockOptionMockRecorder) Allow(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Allow", reflect.TypeOf((*MockOption)(nil).Allow), arg0, arg1)
 }
 
 // Byte mocks base method.
@@ -324,18 +336,6 @@ func (m *MockOption) Update(arg0 Conn, arg1 byte, arg2, arg3, arg4, arg5 bool) {
 func (mr *MockOptionMockRecorder) Update(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOption)(nil).Update), arg0, arg1, arg2, arg3, arg4, arg5)
-}
-
-// allow mocks base method.
-func (m *MockOption) allow(arg0, arg1 bool) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "allow", arg0, arg1)
-}
-
-// allow indicates an expected call of allow.
-func (mr *MockOptionMockRecorder) allow(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "allow", reflect.TypeOf((*MockOption)(nil).allow), arg0, arg1)
 }
 
 // disableThem mocks base method.

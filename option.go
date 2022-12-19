@@ -1,6 +1,7 @@
 package telnet
 
 type Option interface {
+	Allow(them, us bool)
 	Byte() byte
 	EnabledForThem() bool
 	EnabledForUs() bool
@@ -8,7 +9,6 @@ type Option interface {
 	Subnegotiation(Conn, []byte)
 	Update(c Conn, option byte, theyChanged, them, weChanged, us bool)
 
-	allow(them, us bool)
 	disableThem(transmitter) error
 	disableUs(transmitter) error
 	enableThem(transmitter) error
@@ -54,6 +54,7 @@ func NewOption(c byte) *option {
 	return &option{code: c}
 }
 
+func (o *option) Allow(them, us bool)  { o.allowThem, o.allowUs = them, us }
 func (o *option) Byte() byte           { return o.code }
 func (o *option) EnabledForThem() bool { return telnetQYes == o.them }
 func (o *option) EnabledForUs() bool   { return telnetQYes == o.us }
@@ -68,8 +69,6 @@ type sendfunc func(cmd, opt byte) error
 type transmitter interface {
 	sendOptionCommand(cmd, opt byte) error
 }
-
-func (o *option) allow(them, us bool) { o.allowThem, o.allowUs = them, us }
 
 func (o *option) disableThem(tx transmitter) error {
 	return o.disable(&o.them, DONT, tx.sendOptionCommand)

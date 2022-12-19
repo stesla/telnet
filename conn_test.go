@@ -83,12 +83,12 @@ func TestOption(t *testing.T) {
 	expectSendOptionCommand(logger, WILL, Echo)
 
 	option := NewOption(Echo)
-	conn.AllowOption(option, true, true)
+	option.Allow(true, true)
+	conn.SetOption(option)
 
 	option2 := NewMockOption(ctrl)
 	option2.EXPECT().Byte().Return(byte(TransmitBinary)).AnyTimes()
-	option2.EXPECT().allow(true, true)
-	conn.AllowOption(option2, true, true)
+	conn.SetOption(option2)
 
 	buf := make([]byte, 8)
 	option2.EXPECT().Update(conn, uint8(Echo), true, true, false, false)
@@ -139,8 +139,7 @@ func TestEnableOption(t *testing.T) {
 
 	mockOption := NewMockOption(ctrl)
 	mockOption.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
-	mockOption.EXPECT().allow(true, true)
-	conn.AllowOption(mockOption, true, true)
+	conn.SetOption(mockOption)
 
 	mockOption.EXPECT().enableThem(conn)
 	conn.EnableOptionForThem(Echo, true)
@@ -237,8 +236,7 @@ func TestSubnegotiation(t *testing.T) {
 
 	option := NewMockOption(ctrl)
 	option.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
-	option.EXPECT().allow(true, true)
-	conn.AllowOption(option, true, true)
+	conn.SetOption(option)
 
 	option.EXPECT().Subnegotiation(conn, []byte("hi"))
 	buf, err := ioutil.ReadAll(conn)

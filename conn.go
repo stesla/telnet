@@ -13,7 +13,6 @@ type Conn interface {
 	io.Writer
 	Logger
 
-	AllowOption(o Option, allowThem, allowUs bool)
 	EnableOptionForThem(option byte, enable bool) error
 	EnableOptionForUs(option byte, enable bool) error
 	OptionEnabled(option byte) (them, us bool)
@@ -21,6 +20,7 @@ type Conn interface {
 	Send(p []byte) (n int, err error)
 	SetEncoding(encoding.Encoding)
 	SetLogger(Logger)
+	SetOption(o Option)
 	SetReadEncoding(encoding.Encoding)
 	SetWriteEncoding(encoding.Encoding)
 	SuppressGoAhead(enabled bool)
@@ -62,8 +62,7 @@ func newConnection(r io.Reader, w io.Writer) *connection {
 	return conn
 }
 
-func (c *connection) AllowOption(o Option, allowThem, allowUs bool) {
-	o.allow(allowThem, allowUs)
+func (c *connection) SetOption(o Option) {
 	c.opts.put(o)
 }
 
