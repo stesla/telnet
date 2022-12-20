@@ -61,7 +61,7 @@ func expectSendOptionCommand(logger *MockLogger, cmd, opt byte) {
 	)
 }
 
-func TestOptionHandler(t *testing.T) {
+func TestOption(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -82,21 +82,18 @@ func TestOptionHandler(t *testing.T) {
 	expectReceiveOptionCommand(logger, DO, Echo)
 	expectSendOptionCommand(logger, WILL, Echo)
 
-	handler := NewMockOptionHandler(ctrl)
-	handler.EXPECT().Option().Return(byte(Echo))
-	conn.AllowOption(handler, true, true)
+	option := NewOption(Echo)
+	option.Allow(true, true)
+	conn.BindOption(option)
 
-	handler2 := NewMockOptionHandler(ctrl)
-	handler2.EXPECT().Option().Return(byte(TransmitBinary))
-	conn.AllowOption(handler2, true, true)
-	opt := conn.opts.get(TransmitBinary)
-	opt.them, opt.us = telnetQYes, telnetQYes
+	option2 := NewMockOption(ctrl)
+	option2.EXPECT().Bind(conn)
+	option2.EXPECT().Byte().Return(byte(TransmitBinary)).AnyTimes()
+	conn.BindOption(option2)
 
 	buf := make([]byte, 8)
-	handler.EXPECT().Update(conn, uint8(Echo), true, true, false, false)
-	handler2.EXPECT().Update(conn, uint8(Echo), true, true, false, false)
-	handler.EXPECT().Update(conn, uint8(Echo), false, true, true, true)
-	handler2.EXPECT().Update(conn, uint8(Echo), false, true, true, true)
+	option2.EXPECT().Update(uint8(Echo), true, true, false, false)
+	option2.EXPECT().Update(uint8(Echo), false, true, true, true)
 	n, err := conn.Read(buf)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
@@ -121,10 +118,8 @@ func TestOptionHandler(t *testing.T) {
 		'i',
 	})
 	out.Reset()
-	handler.EXPECT().Update(conn, uint8(Echo), true, false, false, true)
-	handler2.EXPECT().Update(conn, uint8(Echo), true, false, false, true)
-	handler.EXPECT().Update(conn, uint8(Echo), false, false, true, false)
-	handler2.EXPECT().Update(conn, uint8(Echo), false, false, true, false)
+	option2.EXPECT().Update(uint8(Echo), true, false, false, true)
+	option2.EXPECT().Update(uint8(Echo), false, false, true, false)
 	n, err = conn.Read(buf)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
@@ -141,37 +136,39 @@ func TestEnableOption(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	conn := newConnection(nil, nil)
+
+	mockOption := NewMockOption(ctrl)
+	mockOption.EXPECT().Bind(conn)
+	mockOption.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
+	conn.BindOption(mockOption)
+
+	mockOption.EXPECT().enableThem()
+	conn.EnableOptionForThem(Echo, true)
+
+	mockOption.EXPECT().enableUs()
+	conn.EnableOptionForUs(Echo, true)
+
+	mockOption.EXPECT().disableThem()
+	conn.EnableOptionForThem(Echo, false)
+
+	mockOption.EXPECT().disableUs()
+	conn.EnableOptionForUs(Echo, false)
+}
+
+func TestSendOptionCommand(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	var out bytes.Buffer
 	conn := newConnection(nil, &out)
 
 	logger := NewMockLogger(ctrl)
 	conn.SetLogger(logger)
 
-	expectSendOptionCommand(logger, DO, Echo)
-	expectSendOptionCommand(logger, WILL, Echo)
-
-	conn.EnableOptionForThem(Echo, true)
-	conn.EnableOptionForUs(Echo, true)
-	assert.Equal(t, []byte{
-		IAC, DO, Echo,
-		IAC, WILL, Echo,
-	}, out.Bytes())
-	out.Reset()
-
-	opt := conn.opts.get(Echo)
-	opt.them = telnetQYes
-	opt.us = telnetQYes
-
-	expectSendOptionCommand(logger, DONT, Echo)
 	expectSendOptionCommand(logger, WONT, Echo)
-
-	conn.EnableOptionForThem(Echo, false)
-	conn.EnableOptionForUs(Echo, false)
-	assert.Equal(t, []byte{
-		IAC, DONT, Echo,
-		IAC, WONT, Echo,
-	}, out.Bytes())
-	out.Reset()
+	conn.sendOptionCommand(WONT, Echo)
+	assert.Equal(t, []byte{IAC, WONT, Echo}, out.Bytes())
 }
 
 func TestNaiveOptions(t *testing.T) {
@@ -239,13 +236,12 @@ func TestSubnegotiation(t *testing.T) {
 	logger := NewMockLogger(ctrl)
 	conn.SetLogger(logger)
 
-	handler := NewMockOptionHandler(ctrl)
-	handler.EXPECT().Option().Return(byte(Echo))
-	conn.AllowOption(handler, true, true)
-	opt := conn.opts.get(Echo)
-	opt.them, opt.us = telnetQYes, telnetQYes
+	option := NewMockOption(ctrl)
+	option.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
+	option.EXPECT().Bind(conn)
+	conn.BindOption(option)
 
-	handler.EXPECT().Subnegotiation(conn, []byte("hi"))
+	option.EXPECT().Subnegotiation([]byte("hi"))
 	buf, err := ioutil.ReadAll(conn)
 	assert.NoError(t, err)
 	assert.Empty(t, buf)
@@ -278,16 +274,19 @@ func TestSubnegotiationForUnsupportedOption(t *testing.T) {
 }
 
 func TestSuppresGoAhead(t *testing.T) {
-	var h OptionHandler = &SuppressGoAheadOption{}
+	var h Option = NewSuppressGoAheadOption()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
+	h.Bind(conn)
+
+	assert.Equal(t, byte(SuppressGoAhead), h.Byte())
 
 	conn.EXPECT().SuppressGoAhead(true)
-	h.Update(conn, uint8(SuppressGoAhead), false, false, true, true)
+	h.Update(uint8(SuppressGoAhead), false, false, true, true)
 
 	conn.EXPECT().SuppressGoAhead(false)
-	h.Update(conn, uint8(SuppressGoAhead), true, true, true, false)
+	h.Update(uint8(SuppressGoAhead), true, true, true, false)
 
-	h.Update(conn, uint8(Echo), true, true, true, true)
+	h.Update(uint8(Echo), true, true, true, true)
 }

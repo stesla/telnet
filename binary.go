@@ -34,30 +34,34 @@ func (e binaryEncoding) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, 
 
 func (a binaryEncoding) Reset() {}
 
-type TransmitBinaryOption struct{}
+type TransmitBinaryOption struct {
+	Option
+}
 
-func (t *TransmitBinaryOption) Option() byte { return TransmitBinary }
+func NewTransmitBinaryOption() *TransmitBinaryOption {
+	return &TransmitBinaryOption{Option: NewOption(TransmitBinary)}
+}
 
-func (t *TransmitBinaryOption) Subnegotiation(_ Conn, _ []byte) {}
+func (t *TransmitBinaryOption) Subnegotiation(_ []byte) {}
 
-func (t *TransmitBinaryOption) Update(c Conn, option byte, theyChanged, them, weChanged, us bool) {
+func (t *TransmitBinaryOption) Update(option byte, theyChanged, them, weChanged, us bool) {
 	if TransmitBinary != option {
 		return
 	}
 
 	if theyChanged {
 		if them {
-			c.SetReadEncoding(Binary)
+			t.Conn().SetReadEncoding(Binary)
 		} else {
-			c.SetReadEncoding(ASCII)
+			t.Conn().SetReadEncoding(ASCII)
 		}
 	}
 
 	if weChanged {
 		if us {
-			c.SetWriteEncoding(Binary)
+			t.Conn().SetWriteEncoding(Binary)
 		} else {
-			c.SetWriteEncoding(ASCII)
+			t.Conn().SetWriteEncoding(ASCII)
 		}
 	}
 }

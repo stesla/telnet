@@ -1,51 +1,89 @@
 package telnet
 
+import "math"
+
+type Option interface {
+	Allow(them, us bool)
+	Bind(Conn)
+	Byte() byte
+	Conn() Conn
+	EnabledForThem() bool
+	EnabledForUs() bool
+	Subnegotiation([]byte)
+	Update(option byte, theyChanged, them, weChanged, us bool)
+
+	disableThem() error
+	disableUs() error
+	enableThem() error
+	enableUs() error
+	receive(c byte) error
+}
+
 func newOptionMap() *optionMap {
-	return &optionMap{
-		m: make(map[byte]*option),
+	m := make(map[byte]Option)
+	for b := byte(0); b < math.MaxUint8; b++ {
+		m[b] = NewOption(b)
 	}
+	return &optionMap{m: m}
 }
 
 type optionMap struct {
-	m map[byte]*option
+	m map[byte]Option
 }
 
-func (m *optionMap) get(c byte) (opt *option) {
-	opt, ok := m.m[c]
-	if !ok {
-		opt = newOption(c)
-		m.m[c] = opt
+func (m *optionMap) each(fn func(Option)) {
+	for _, opt := range m.m {
+		fn(opt)
 	}
-	return
+}
+
+func (m *optionMap) get(c byte) Option {
+	return m.m[c]
+}
+
+func (m *optionMap) put(o Option) {
+	m.m[o.Byte()] = o
 }
 
 type option struct {
+	conn               Conn
 	code               byte
 	allowUs, allowThem bool
 	us, them           telnetQState
 }
 
-func newOption(c byte) *option {
+func NewOption(c byte) *option {
 	return &option{code: c}
 }
 
-type sendfunc func(cmd, opt byte) error
+func (o *option) Allow(them, us bool)  { o.allowThem, o.allowUs = them, us }
+func (o *option) Bind(conn Conn)       { o.conn = conn }
+func (o *option) Byte() byte           { return o.code }
+func (o *option) Conn() Conn           { return o.conn }
+func (o *option) EnabledForThem() bool { return telnetQYes == o.them }
+func (o *option) EnabledForUs() bool   { return telnetQYes == o.us }
 
-func (o *option) disableThem(send sendfunc) error {
-	return o.disable(&o.them, DONT, send)
+func (o *option) Subnegotiation(bytes []byte) {
+	o.conn.Logf(DEBUG, "RECV: IAC SB %s %q IAC SE", optionByte(o.Byte()), bytes)
 }
 
-func (o *option) disableUs(send sendfunc) error {
-	return o.disable(&o.us, WONT, send)
+func (o *option) Update(byte, bool, bool, bool, bool) {}
+
+func (o *option) disableThem() error {
+	return o.disable(&o.them, DONT)
 }
 
-func (o *option) disable(state *telnetQState, cmd byte, send sendfunc) error {
+func (o *option) disableUs() error {
+	return o.disable(&o.us, WONT)
+}
+
+func (o *option) disable(state *telnetQState, cmd byte) error {
 	switch *state {
 	case telnetQNo:
 		// ignore
 	case telnetQYes:
 		*state = telnetQWantNoEmpty
-		return send(cmd, o.code)
+		return o.sendOptionCommand(cmd, o.code)
 	case telnetQWantNoEmpty:
 		// ignore
 	case telnetQWantNoOpposite:
@@ -58,27 +96,18 @@ func (o *option) disable(state *telnetQState, cmd byte, send sendfunc) error {
 	return nil
 }
 
-func (o *option) enabledForThem() bool {
-	return telnetQYes == o.them
+func (o *option) enableThem() error {
+	return o.enable(&o.them, DO)
 }
 
-func (o *option) enabledForUs() bool {
-	return telnetQYes == o.us
+func (o *option) enableUs() error {
+	return o.enable(&o.us, WILL)
 }
-
-func (o *option) enableThem(send sendfunc) error {
-	return o.enable(&o.them, DO, send)
-}
-
-func (o *option) enableUs(send sendfunc) error {
-	return o.enable(&o.us, WILL, send)
-}
-
-func (o *option) enable(state *telnetQState, cmd byte, send sendfunc) error {
+func (o *option) enable(state *telnetQState, cmd byte) error {
 	switch *state {
 	case telnetQNo:
 		*state = telnetQWantYesEmpty
-		return send(cmd, o.code)
+		return o.sendOptionCommand(cmd, o.code)
 	case telnetQYes:
 		// ignore
 	case telnetQWantNoEmpty:
@@ -93,28 +122,28 @@ func (o *option) enable(state *telnetQState, cmd byte, send sendfunc) error {
 	return nil
 }
 
-func (o *option) receive(c byte, send sendfunc) error {
+func (o *option) receive(c byte) error {
 	switch c {
 	case DO:
-		return o.receiveEnableRequest(&o.us, o.allowUs, WILL, WONT, send)
+		return o.receiveEnableRequest(&o.us, o.allowUs, WILL, WONT)
 	case DONT:
-		return o.receiveDisableDemand(&o.us, WILL, WONT, send)
+		return o.receiveDisableDemand(&o.us, WILL, WONT)
 	case WILL:
-		return o.receiveEnableRequest(&o.them, o.allowThem, DO, DONT, send)
+		return o.receiveEnableRequest(&o.them, o.allowThem, DO, DONT)
 	case WONT:
-		return o.receiveDisableDemand(&o.them, DO, DONT, send)
+		return o.receiveDisableDemand(&o.them, DO, DONT)
 	}
 	return nil
 }
 
-func (o *option) receiveEnableRequest(state *telnetQState, allowed bool, accept, reject byte, send sendfunc) error {
+func (o *option) receiveEnableRequest(state *telnetQState, allowed bool, accept, reject byte) error {
 	switch *state {
 	case telnetQNo:
 		if allowed {
 			*state = telnetQYes
-			return send(accept, o.code)
+			return o.sendOptionCommand(accept, o.code)
 		} else {
-			return send(reject, o.code)
+			return o.sendOptionCommand(reject, o.code)
 		}
 	case telnetQYes:
 		// ignore
@@ -126,29 +155,35 @@ func (o *option) receiveEnableRequest(state *telnetQState, allowed bool, accept,
 		*state = telnetQYes
 	case telnetQWantYesOpposite:
 		*state = telnetQWantNoEmpty
-		return send(reject, o.code)
+		return o.sendOptionCommand(reject, o.code)
 	}
 	return nil
 }
 
-func (o *option) receiveDisableDemand(state *telnetQState, accept, reject byte, send sendfunc) error {
+func (o *option) receiveDisableDemand(state *telnetQState, accept, reject byte) error {
 	switch *state {
 	case telnetQNo:
 		// ignore
 	case telnetQYes:
 		*state = telnetQNo
-		return send(reject, o.code)
+		return o.sendOptionCommand(reject, o.code)
 	case telnetQWantNoEmpty:
 		*state = telnetQNo
 	case telnetQWantNoOpposite:
 		*state = telnetQWantYesEmpty
-		return send(accept, o.code)
+		return o.sendOptionCommand(accept, o.code)
 	case telnetQWantYesEmpty:
 		*state = telnetQNo
 	case telnetQWantYesOpposite:
 		*state = telnetQNo
 	}
 	return nil
+}
+
+func (o *option) sendOptionCommand(cmd, opt byte) error {
+	o.Conn().Logf(DEBUG, "SEND: IAC %s %s", commandByte(cmd), optionByte(opt))
+	_, err := o.Conn().Send([]byte{IAC, cmd, opt})
+	return err
 }
 
 type telnetQState int
