@@ -36,7 +36,7 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 		const ttable = "[TTABLE]"
 		if len(buf) > 10 && bytes.HasPrefix(buf, []byte(ttable)) {
 			// We don't support TTABLE, so we're just going to strip off the
-			// version byte, but according to RFC 2066 it should bsaically always
+			// version byte, but according to RFC 2066 it should basically always
 			// be 0x01. If we ever add TTABLE support, we'll want to check the
 			// version to see if it's a version we support.
 			buf = buf[len(ttable)+1:]
