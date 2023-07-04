@@ -290,3 +290,20 @@ func TestSuppresGoAhead(t *testing.T) {
 
 	h.Update(uint8(Echo), true, true, true, true)
 }
+
+func TestRequestCharset(t *testing.T) {
+	var out bytes.Buffer
+	conn := newConnection(nil, &out)
+
+	err := conn.RequestEncoding(unicode.UTF8)
+	assert.Error(t, err)
+	assert.Empty(t, out)
+
+	charset := NewOption(Charset)
+	charset.us = telnetQYes
+	conn.BindOption(charset)
+
+	err = conn.RequestEncoding(unicode.UTF8)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{IAC, SB, charsetRequest, 'U', 'T', 'F', '-', '8', SE}, out.Bytes())
+}

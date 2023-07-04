@@ -1,11 +1,13 @@
 package telnet
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
 
 	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/ianaindex"
 )
 
 type Conn interface {
@@ -18,6 +20,7 @@ type Conn interface {
 	EnableOptionForUs(option byte, enable bool) error
 	OptionEnabled(option byte) (them, us bool)
 
+	RequestEncoding(encoding.Encoding) error
 	Send(p []byte) (n int, err error)
 	SetEncoding(encoding.Encoding)
 	SetLogger(Logger)
@@ -98,6 +101,22 @@ func (c *connection) OptionEnabled(option byte) (them, us bool) {
 
 func (c *connection) Read(p []byte) (n int, err error) {
 	return c.in.Read(p)
+}
+
+func (c *connection) RequestEncoding(enc encoding.Encoding) error {
+	if _, us := c.OptionEnabled(Charset); !us {
+		return errors.New("charset option not enabled")
+	}
+	msg := []byte{IAC, SB, charsetRequest}
+	str, err := ianaindex.IANA.Name(enc)
+	if err != nil {
+		return err
+	}
+	msg = append(msg, str...)
+	msg = append(msg, SE)
+
+	_, err = c.Send(msg)
+	return err
 }
 
 func (c *connection) Send(p []byte) (int, error) {

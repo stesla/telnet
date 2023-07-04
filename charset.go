@@ -26,13 +26,18 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 
 	c.logCharsetCommand("RECV: IAC SB %s %s %s IAC SE", charsetByte(cmd), string(buf))
 
-	if !c.EnabledForUs() {
-		c.sendCharsetRejected()
-		return
-	}
-
 	switch cmd {
+	case charsetAccepted:
+		c.enc = c.getEncoding(buf)
+		them, us := c.Conn().OptionEnabled(TransmitBinary)
+		c.Update(TransmitBinary, false, them, false, us)
+
 	case charsetRequest:
+		if !c.EnabledForUs() {
+			c.sendCharsetRejected()
+			return
+		}
+
 		const ttable = "[TTABLE]"
 		if len(buf) > 10 && bytes.HasPrefix(buf, []byte(ttable)) {
 			// We don't support TTABLE, so we're just going to strip off the
@@ -97,16 +102,25 @@ func (c *CharsetOption) logCharsetCommand(fmt string, cmd charsetByte, v ...any)
 
 func (c *CharsetOption) selectEncoding(names [][]byte) (charset []byte, enc encoding.Encoding) {
 	for _, name := range names {
-		if e, found := encodings[string(name)]; found {
-			return name, e
-		}
-
-		e, _ := ianaindex.IANA.Encoding(string(name))
-		if e != nil {
-			return name, e
+		charset := c.getEncoding(name)
+		if charset != nil {
+			return name, charset
 		}
 	}
 	return
+}
+
+func (*CharsetOption) getEncoding(name []byte) encoding.Encoding {
+	if e, found := encodings[string(name)]; found {
+		return e
+	}
+
+	e, _ := ianaindex.IANA.Encoding(string(name))
+	if e != nil {
+		return e
+	}
+
+	return nil
 }
 
 func (c *CharsetOption) send(p []byte) {

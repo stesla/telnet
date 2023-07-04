@@ -84,7 +84,7 @@ func TestRejectWhenEnabled(t *testing.T) {
 	}
 }
 
-func TestAcceptEncoding(t *testing.T) {
+func TestAcceptEncodingRequest(t *testing.T) {
 	var tests = []struct {
 		encoding             encoding.Encoding
 		encodingName         string
@@ -136,6 +136,34 @@ func TestAcceptEncoding(t *testing.T) {
 			assert.Equal(t, test.encoding, co.enc)
 		})
 	}
+}
+
+func TestEncodingRequestAccepted(t *testing.T) {
+	withCharsetAndConn(t, func(h Option, conn *MockConn) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		co := h.(*CharsetOption)
+		mockOption := NewMockOption(ctrl)
+		mockOption.EXPECT().Conn().Return(conn).AnyTimes()
+		mockOption.EXPECT().Byte().Return(byte(Charset)).AnyTimes()
+		mockOption.EXPECT().EnabledForUs().Return(true).AnyTimes()
+		co.Option = mockOption
+
+		conn.EXPECT().Logf(
+			DEBUG,
+			"RECV: IAC SB %s %s %s IAC SE",
+			optionByte(Charset),
+			charsetByte(charsetAccepted),
+			"UTF-8",
+		)
+		conn.EXPECT().OptionEnabled(uint8(TransmitBinary)).Return(true, true)
+		conn.EXPECT().SetEncoding(unicode.UTF8)
+
+		data := []byte{charsetAccepted}
+		data = append(data, "UTF-8"...)
+		h.Subnegotiation(data)
+	})
 }
 
 func TestUpdateTransmitBinary(t *testing.T) {

@@ -121,6 +121,20 @@ func (mr *MockConnMockRecorder) Read(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockConn)(nil).Read), arg0)
 }
 
+// RequestEncoding mocks base method.
+func (m *MockConn) RequestEncoding(arg0 encoding.Encoding) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RequestEncoding", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RequestEncoding indicates an expected call of RequestEncoding.
+func (mr *MockConnMockRecorder) RequestEncoding(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestEncoding", reflect.TypeOf((*MockConn)(nil).RequestEncoding), arg0)
+}
+
 // Send mocks base method.
 func (m *MockConn) Send(arg0 []byte) (int, error) {
 	m.ctrl.T.Helper()
