@@ -66,6 +66,10 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 
 		them, us := c.Conn().OptionEnabled(TransmitBinary)
 		c.Update(TransmitBinary, false, them, false, us)
+	case charsetTTableIs:
+		// We don't support TTABLE, but we don't want to leave our peers hanging
+		// if they send us a TTABLE-IS subnegotiation.
+		c.Conn().Send([]byte{IAC, SB, Charset, charsetTTableRejected, IAC, SE})
 	}
 }
 

@@ -203,3 +203,20 @@ func TestUpdateTransmitBinary(t *testing.T) {
 		})
 	}
 }
+
+func TestRejectsTTable(t *testing.T) {
+	withCharsetAndConn(t, func(h Option, conn *MockConn) {
+		conn.EXPECT().Logf(
+			DEBUG,
+			"RECV: IAC SB %s %s %s IAC SE",
+			optionByte(Charset),
+			charsetByte(charsetTTableIs),
+			"\x01bogus",
+		)
+		conn.EXPECT().Send([]byte{IAC, SB, Charset, charsetTTableRejected, IAC, SE})
+
+		data := []byte{charsetTTableIs, 1}
+		data = append(data, "bogus"...)
+		h.Subnegotiation(data)
+	})
+}
