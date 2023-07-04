@@ -113,7 +113,7 @@ func (c *connection) RequestEncoding(enc encoding.Encoding) error {
 		return err
 	}
 	msg = append(msg, str...)
-	msg = append(msg, SE)
+	msg = append(msg, IAC, SE)
 
 	_, err = c.Send(msg)
 	return err
