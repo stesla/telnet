@@ -87,7 +87,7 @@ func TestOption(t *testing.T) {
 	conn.BindOption(option)
 
 	option2 := NewMockOption(ctrl)
-	option2.EXPECT().Bind(conn)
+	option2.EXPECT().Bind(conn, conn)
 	option2.EXPECT().Byte().Return(byte(TransmitBinary)).AnyTimes()
 	conn.BindOption(option2)
 
@@ -139,7 +139,7 @@ func TestEnableOption(t *testing.T) {
 	conn := newConnection(nil, nil)
 
 	mockOption := NewMockOption(ctrl)
-	mockOption.EXPECT().Bind(conn)
+	mockOption.EXPECT().Bind(conn, conn)
 	mockOption.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
 	conn.BindOption(mockOption)
 
@@ -238,7 +238,7 @@ func TestSubnegotiation(t *testing.T) {
 
 	option := NewMockOption(ctrl)
 	option.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
-	option.EXPECT().Bind(conn)
+	option.EXPECT().Bind(conn, conn)
 	conn.BindOption(option)
 
 	option.EXPECT().Subnegotiation([]byte("hi"))
@@ -278,7 +278,7 @@ func TestSuppresGoAhead(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
-	h.Bind(conn)
+	h.Bind(conn, nil)
 
 	assert.Equal(t, byte(SuppressGoAhead), h.Byte())
 
@@ -306,4 +306,26 @@ func TestRequestCharset(t *testing.T) {
 	err = conn.RequestEncoding(unicode.UTF8)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{IAC, SB, charsetRequest, 'U', 'T', 'F', '-', '8', IAC, SE}, out.Bytes())
+}
+
+func TestSendEvent(t *testing.T) {
+	conn := newConnection(nil, nil)
+	var called bool
+	conn.AddListener(&FuncListener{func(event string, data any) {
+		called = true
+		assert.Equal(t, "test-event", event)
+		assert.Equal(t, "foo", data)
+	}})
+	conn.SendEvent("test-event", "foo")
+	assert.True(t, called)
+}
+
+func TestRemoveListener(t *testing.T) {
+	conn := newConnection(nil, nil)
+	fn := &FuncListener{func(string, any) {
+		assert.FailNow(t, "listener not removed")
+	}}
+	conn.AddListener(fn)
+	conn.RemoveListener(fn)
+	conn.SendEvent("test-event", "foo")
 }

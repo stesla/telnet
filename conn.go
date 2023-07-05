@@ -10,10 +10,23 @@ import (
 	"golang.org/x/text/encoding/ianaindex"
 )
 
+type Listener interface {
+	HandleEvent(string, any)
+}
+
+type FuncListener struct {
+	fn func(string, any)
+}
+
+func (f FuncListener) HandleEvent(event string, data any) { f.fn(event, data) }
+
 type Conn interface {
 	io.Reader
 	io.Writer
 	Logger
+
+	AddListener(Listener)
+	RemoveListener(Listener)
 
 	BindOption(o Option)
 	EnableOptionForThem(option byte, enable bool) error
@@ -48,6 +61,7 @@ func Server(conn net.Conn) Conn {
 type connection struct {
 	Logger
 
+	listeners       []Listener
 	opts            *optionMap
 	r, in           io.Reader
 	w, out          io.Writer
@@ -56,18 +70,23 @@ type connection struct {
 
 func newConnection(r io.Reader, w io.Writer) *connection {
 	conn := &connection{
-		Logger: NullLogger{},
-		opts:   newOptionMap(),
-		r:      r,
-		w:      w,
+		Logger:    NullLogger{},
+		listeners: []Listener{},
+		opts:      newOptionMap(),
+		r:         r,
+		w:         w,
 	}
-	conn.opts.each(func(o Option) { o.Bind(conn) })
+	conn.opts.each(func(o Option) { o.Bind(conn, conn) })
 	conn.SetEncoding(ASCII)
 	return conn
 }
 
+func (c *connection) AddListener(l Listener) {
+	c.listeners = append(c.listeners, l)
+}
+
 func (c *connection) BindOption(o Option) {
-	o.Bind(c)
+	o.Bind(c, c)
 	c.opts.put(o)
 }
 
@@ -103,6 +122,16 @@ func (c *connection) Read(p []byte) (n int, err error) {
 	return c.in.Read(p)
 }
 
+func (c *connection) RemoveListener(l Listener) {
+	listeners := []Listener{}
+	for _, ll := range c.listeners {
+		if l != ll {
+			listeners = append(listeners, ll)
+		}
+	}
+	c.listeners = listeners
+}
+
 func (c *connection) RequestEncoding(enc encoding.Encoding) error {
 	if _, us := c.OptionEnabled(Charset); !us {
 		return errors.New("charset option not enabled")
@@ -121,6 +150,12 @@ func (c *connection) RequestEncoding(enc encoding.Encoding) error {
 
 func (c *connection) Send(p []byte) (int, error) {
 	return c.w.Write(p)
+}
+
+func (c *connection) SendEvent(event string, data any) {
+	for _, l := range c.listeners {
+		l.HandleEvent(event, data)
+	}
 }
 
 func (c *connection) SetEncoding(enc encoding.Encoding) {

@@ -2,11 +2,15 @@ package telnet
 
 import "math"
 
+type EventSink interface {
+	SendEvent(event string, data any)
+}
 type Option interface {
 	Allow(them, us bool)
-	Bind(Conn)
+	Bind(Conn, EventSink)
 	Byte() byte
 	Conn() Conn
+	Sink() EventSink
 	EnabledForThem() bool
 	EnabledForUs() bool
 	Subnegotiation([]byte)
@@ -47,6 +51,7 @@ func (m *optionMap) put(o Option) {
 
 type option struct {
 	conn               Conn
+	sink               EventSink
 	code               byte
 	allowUs, allowThem bool
 	us, them           telnetQState
@@ -56,12 +61,13 @@ func NewOption(c byte) *option {
 	return &option{code: c}
 }
 
-func (o *option) Allow(them, us bool)  { o.allowThem, o.allowUs = them, us }
-func (o *option) Bind(conn Conn)       { o.conn = conn }
-func (o *option) Byte() byte           { return o.code }
-func (o *option) Conn() Conn           { return o.conn }
-func (o *option) EnabledForThem() bool { return telnetQYes == o.them }
-func (o *option) EnabledForUs() bool   { return telnetQYes == o.us }
+func (o *option) Allow(them, us bool)            { o.allowThem, o.allowUs = them, us }
+func (o *option) Bind(conn Conn, sink EventSink) { o.conn, o.sink = conn, sink }
+func (o *option) Byte() byte                     { return o.code }
+func (o *option) Conn() Conn                     { return o.conn }
+func (o *option) Sink() EventSink                { return o.sink }
+func (o *option) EnabledForThem() bool           { return telnetQYes == o.them }
+func (o *option) EnabledForUs() bool             { return telnetQYes == o.us }
 
 func (o *option) Subnegotiation(bytes []byte) {
 	o.conn.Logf(DEBUG, "RECV: IAC SB %s %q IAC SE", optionByte(o.Byte()), bytes)

@@ -23,7 +23,6 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 	}
 
 	cmd, buf := buf[0], buf[1:]
-
 	c.logCharsetCommand("RECV: IAC SB %s %s %s IAC SE", charsetByte(cmd), string(buf))
 
 	switch cmd {
@@ -31,6 +30,9 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 		c.enc = c.getEncoding(buf)
 		them, us := c.Conn().OptionEnabled(TransmitBinary)
 		c.Update(TransmitBinary, false, them, false, us)
+
+	case charsetRejected:
+		c.Sink().SendEvent("charset-rejected", nil)
 
 	case charsetRequest:
 		if !c.EnabledForUs() {
@@ -78,8 +80,10 @@ func (c *CharsetOption) Update(option byte, theyChanged, them, weChanged, us boo
 	case TransmitBinary:
 		if c.EnabledForUs() && c.enc != nil {
 			conn := c.Conn()
+			sink := c.Sink()
 			if them && us {
 				conn.SetEncoding(c.enc)
+				sink.SendEvent("charset-accepted", c.enc)
 			} else {
 				conn.SetEncoding(ASCII)
 			}

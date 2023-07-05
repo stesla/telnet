@@ -24,7 +24,7 @@ func TestTransmitBinaryOption(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
-	h.Bind(conn)
+	h.Bind(conn, nil)
 
 	assert.Equal(t, byte(TransmitBinary), h.Byte())
 
