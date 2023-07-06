@@ -10,23 +10,13 @@ import (
 	"golang.org/x/text/encoding/ianaindex"
 )
 
-type Listener interface {
-	HandleEvent(string, any)
-}
-
-type FuncListener struct {
-	fn func(string, any)
-}
-
-func (f FuncListener) HandleEvent(event string, data any) { f.fn(event, data) }
-
 type Conn interface {
 	io.Reader
 	io.Writer
 	Logger
 
-	AddListener(Listener)
-	RemoveListener(Listener)
+	AddListener(EventListener)
+	RemoveListener(EventListener)
 
 	BindOption(o Option)
 	EnableOptionForThem(option byte, enable bool) error
@@ -61,7 +51,7 @@ func Server(conn net.Conn) Conn {
 type connection struct {
 	Logger
 
-	listeners       []Listener
+	listeners       []EventListener
 	opts            *optionMap
 	r, in           io.Reader
 	w, out          io.Writer
@@ -71,7 +61,7 @@ type connection struct {
 func newConnection(r io.Reader, w io.Writer) *connection {
 	conn := &connection{
 		Logger:    NullLogger{},
-		listeners: []Listener{},
+		listeners: []EventListener{},
 		opts:      newOptionMap(),
 		r:         r,
 		w:         w,
@@ -81,7 +71,7 @@ func newConnection(r io.Reader, w io.Writer) *connection {
 	return conn
 }
 
-func (c *connection) AddListener(l Listener) {
+func (c *connection) AddListener(l EventListener) {
 	c.listeners = append(c.listeners, l)
 }
 
@@ -122,14 +112,14 @@ func (c *connection) Read(p []byte) (n int, err error) {
 	return c.in.Read(p)
 }
 
-func (c *connection) RemoveListener(l Listener) {
-	listeners := []Listener{}
-	for _, ll := range c.listeners {
-		if l != ll {
-			listeners = append(listeners, ll)
+func (c *connection) RemoveListener(l EventListener) {
+	var i int
+	for i = range c.listeners {
+		if l == c.listeners[i] {
+			c.listeners = append(c.listeners[:i], c.listeners[i+1:]...)
+			return
 		}
 	}
-	c.listeners = listeners
 }
 
 func (c *connection) RequestEncoding(enc encoding.Encoding) error {
@@ -237,3 +227,13 @@ func (o *SuppressGoAheadOption) Update(option byte, theyChanged, them, weChanged
 		o.Conn().SuppressGoAhead(us)
 	}
 }
+
+type EventListener interface {
+	HandleEvent(string, any)
+}
+
+type FuncListener struct {
+	fn func(string, any)
+}
+
+func (f FuncListener) HandleEvent(event string, data any) { f.fn(event, data) }

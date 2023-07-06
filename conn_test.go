@@ -322,10 +322,13 @@ func TestSendEvent(t *testing.T) {
 
 func TestRemoveListener(t *testing.T) {
 	conn := newConnection(nil, nil)
-	fn := &FuncListener{func(string, any) {
-		assert.FailNow(t, "listener not removed")
-	}}
-	conn.AddListener(fn)
-	conn.RemoveListener(fn)
+	count := 0
+	fn := func(string, any) { count++ }
+	listener := &FuncListener{fn}
+	conn.AddListener(&FuncListener{fn})
+	conn.AddListener(listener)
+	conn.AddListener(&FuncListener{fn})
+	conn.RemoveListener(listener)
 	conn.SendEvent("test-event", "foo")
+	assert.Equal(t, 2, count)
 }

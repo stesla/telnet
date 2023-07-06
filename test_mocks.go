@@ -35,7 +35,7 @@ func (m *MockConn) EXPECT() *MockConnMockRecorder {
 }
 
 // AddListener mocks base method.
-func (m *MockConn) AddListener(arg0 Listener) {
+func (m *MockConn) AddListener(arg0 EventListener) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddListener", arg0)
 }
@@ -134,7 +134,7 @@ func (mr *MockConnMockRecorder) Read(arg0 interface{}) *gomock.Call {
 }
 
 // RemoveListener mocks base method.
-func (m *MockConn) RemoveListener(arg0 Listener) {
+func (m *MockConn) RemoveListener(arg0 EventListener) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "RemoveListener", arg0)
 }
