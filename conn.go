@@ -1,11 +1,13 @@
 package telnet
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
 
 	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/ianaindex"
 )
 
 type Conn interface {
@@ -13,11 +15,15 @@ type Conn interface {
 	io.Writer
 	Logger
 
+	AddListener(EventListener)
+	RemoveListener(EventListener)
+
 	BindOption(o Option)
 	EnableOptionForThem(option byte, enable bool) error
 	EnableOptionForUs(option byte, enable bool) error
 	OptionEnabled(option byte) (them, us bool)
 
+	RequestEncoding(encoding.Encoding) error
 	Send(p []byte) (n int, err error)
 	SetEncoding(encoding.Encoding)
 	SetLogger(Logger)
@@ -45,6 +51,7 @@ func Server(conn net.Conn) Conn {
 type connection struct {
 	Logger
 
+	listeners       []EventListener
 	opts            *optionMap
 	r, in           io.Reader
 	w, out          io.Writer
@@ -53,18 +60,23 @@ type connection struct {
 
 func newConnection(r io.Reader, w io.Writer) *connection {
 	conn := &connection{
-		Logger: NullLogger{},
-		opts:   newOptionMap(),
-		r:      r,
-		w:      w,
+		Logger:    NullLogger{},
+		listeners: []EventListener{},
+		opts:      newOptionMap(),
+		r:         r,
+		w:         w,
 	}
-	conn.opts.each(func(o Option) { o.Bind(conn) })
+	conn.opts.each(func(o Option) { o.Bind(conn, conn) })
 	conn.SetEncoding(ASCII)
 	return conn
 }
 
+func (c *connection) AddListener(l EventListener) {
+	c.listeners = append(c.listeners, l)
+}
+
 func (c *connection) BindOption(o Option) {
-	o.Bind(c)
+	o.Bind(c, c)
 	c.opts.put(o)
 }
 
@@ -100,8 +112,40 @@ func (c *connection) Read(p []byte) (n int, err error) {
 	return c.in.Read(p)
 }
 
+func (c *connection) RemoveListener(l EventListener) {
+	var i int
+	for i = range c.listeners {
+		if l == c.listeners[i] {
+			c.listeners = append(c.listeners[:i], c.listeners[i+1:]...)
+			return
+		}
+	}
+}
+
+func (c *connection) RequestEncoding(enc encoding.Encoding) error {
+	if _, us := c.OptionEnabled(Charset); !us {
+		return errors.New("charset option not enabled")
+	}
+	msg := []byte{IAC, SB, charsetRequest}
+	str, err := ianaindex.IANA.Name(enc)
+	if err != nil {
+		return err
+	}
+	msg = append(msg, str...)
+	msg = append(msg, IAC, SE)
+
+	_, err = c.Send(msg)
+	return err
+}
+
 func (c *connection) Send(p []byte) (int, error) {
 	return c.w.Write(p)
+}
+
+func (c *connection) SendEvent(event string, data any) {
+	for _, l := range c.listeners {
+		l.HandleEvent(event, data)
+	}
 }
 
 func (c *connection) SetEncoding(enc encoding.Encoding) {
@@ -183,3 +227,13 @@ func (o *SuppressGoAheadOption) Update(option byte, theyChanged, them, weChanged
 		o.Conn().SuppressGoAhead(us)
 	}
 }
+
+type EventListener interface {
+	HandleEvent(string, any)
+}
+
+type FuncListener struct {
+	fn func(string, any)
+}
+
+func (f FuncListener) HandleEvent(event string, data any) { f.fn(event, data) }

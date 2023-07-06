@@ -29,7 +29,7 @@ func TestQMethodReceive(t *testing.T) {
 	conn := NewMockConn(ctrl)
 
 	o := NewOption(SuppressGoAhead)
-	o.Bind(conn)
+	o.Bind(conn, nil)
 
 	tests := []*qMethodTest{
 		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQNo, permitted: false, end: telnetQNo, expected: WONT},
@@ -77,7 +77,7 @@ func TestQMethodEnableOrDisable(t *testing.T) {
 	conn := NewMockConn(ctrl)
 
 	o := NewOption(SuppressGoAhead)
-	o.Bind(conn)
+	o.Bind(conn, nil)
 
 	disableThem := fmt.Sprintf("%p", o.disableThem)
 	disableUs := fmt.Sprintf("%p", o.disableUs)
