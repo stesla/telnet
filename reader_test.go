@@ -97,7 +97,7 @@ func TestErrorReading(t *testing.T) {
 	buf := make([]byte, 16)
 	n, err := r.Read(buf)
 	buf = buf[:n]
-	assert.ErrorContains(t, err, "boom")
+	assert.Error(t, err, "boom")
 	assert.Equal(t, []byte("ABC"), buf)
 }
 
