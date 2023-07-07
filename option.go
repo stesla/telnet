@@ -70,7 +70,7 @@ func (o *option) EnabledForThem() bool           { return telnetQYes == o.them }
 func (o *option) EnabledForUs() bool             { return telnetQYes == o.us }
 
 func (o *option) Subnegotiation(bytes []byte) {
-	o.conn.Logf(DEBUG, "RECV: IAC SB %s %q IAC SE", optionByte(o.Byte()), bytes)
+	o.conn.Logf("RECV: IAC SB %s %q IAC SE", optionByte(o.Byte()), bytes)
 }
 
 func (o *option) Update(byte, bool, bool, bool, bool) {}
@@ -187,7 +187,7 @@ func (o *option) receiveDisableDemand(state *telnetQState, accept, reject byte) 
 }
 
 func (o *option) sendOptionCommand(cmd, opt byte) error {
-	o.Conn().Logf(DEBUG, "SEND: IAC %s %s", commandByte(cmd), optionByte(opt))
+	o.Conn().Logf("SEND: IAC %s %s", commandByte(cmd), optionByte(opt))
 	_, err := o.Conn().Send([]byte{IAC, cmd, opt})
 	return err
 }

@@ -20,7 +20,7 @@ func TestReadGoAhead(t *testing.T) {
 	logger := NewMockLogger(ctrl)
 	conn.SetLogger(logger)
 
-	logger.EXPECT().Logf(DEBUG, "RECV: %s", &telnetGoAhead{})
+	logger.EXPECT().Logf("RECV: %s", &telnetGoAhead{})
 
 	buf := make([]byte, 8)
 	n, err := conn.Read(buf)
@@ -46,7 +46,6 @@ func TestWriteGoAhead(t *testing.T) {
 
 func expectReceiveOptionCommand(logger *MockLogger, cmd, opt byte) {
 	logger.EXPECT().Logf(
-		DEBUG,
 		"RECV: %s",
 		&telnetOptionCommand{cmd, opt},
 	)
@@ -54,7 +53,6 @@ func expectReceiveOptionCommand(logger *MockLogger, cmd, opt byte) {
 
 func expectSendOptionCommand(logger *MockLogger, cmd, opt byte) {
 	logger.EXPECT().Logf(
-		DEBUG,
 		"SEND: IAC %s %s",
 		commandByte(cmd),
 		optionByte(opt),
@@ -156,21 +154,6 @@ func TestEnableOption(t *testing.T) {
 	conn.EnableOptionForUs(Echo, false)
 }
 
-func TestSendOptionCommand(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	var out bytes.Buffer
-	conn := newConnection(nil, &out)
-
-	logger := NewMockLogger(ctrl)
-	conn.SetLogger(logger)
-
-	expectSendOptionCommand(logger, WONT, Echo)
-	conn.sendOptionCommand(WONT, Echo)
-	assert.Equal(t, []byte{IAC, WONT, Echo}, out.Bytes())
-}
-
 func TestNaiveOptions(t *testing.T) {
 	var tests = []struct {
 		in                   []byte
@@ -260,7 +243,6 @@ func TestSubnegotiationForUnsupportedOption(t *testing.T) {
 
 	logger := NewMockLogger(ctrl)
 	logger.EXPECT().Logf(
-		DEBUG,
 		"RECV: IAC SB %s %q IAC SE",
 		optionByte(Echo),
 		[]byte("hi"),

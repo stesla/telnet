@@ -63,7 +63,7 @@ func TestQMethodReceive(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %v", commandByte(q.receive), q.start, q.permitted)
 		*q.state, *q.allow = q.start, q.permitted
 		if q.expected != 0 {
-			conn.EXPECT().Logf(DEBUG, gomock.Any(), commandByte(q.expected), optionByte(o.code))
+			conn.EXPECT().Logf(gomock.Any(), commandByte(q.expected), optionByte(o.code))
 			conn.EXPECT().Send([]byte{IAC, q.expected, o.code})
 		}
 		o.receive(q.receive)
@@ -124,7 +124,7 @@ func TestQMethodEnableOrDisable(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %s", action, who, q.start)
 		*q.state = q.start
 		if q.expected != 0 {
-			conn.EXPECT().Logf(DEBUG, gomock.Any(), commandByte(q.expected), optionByte(o.code))
+			conn.EXPECT().Logf(gomock.Any(), commandByte(q.expected), optionByte(o.code))
 			conn.EXPECT().Send([]byte{IAC, q.expected, o.code})
 		}
 		err := q.fn()

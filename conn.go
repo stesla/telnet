@@ -180,7 +180,7 @@ func (c *connection) Write(p []byte) (n int, err error) {
 
 func (c *connection) handleCommand(cmd any) (err error) {
 	if s, ok := cmd.(fmt.Stringer); ok {
-		c.Logf(DEBUG, "RECV: %s", s)
+		c.Logf("RECV: %s", s)
 	}
 
 	switch t := cmd.(type) {
@@ -203,12 +203,6 @@ func (c *connection) handleCommand(cmd any) (err error) {
 		option := c.opts.get(t.opt)
 		option.Subnegotiation(t.bytes)
 	}
-	return
-}
-
-func (c *connection) sendOptionCommand(cmd, opt byte) (err error) {
-	c.Logf(DEBUG, "SEND: IAC %s %s", commandByte(cmd), optionByte(opt))
-	_, err = c.Send([]byte{IAC, cmd, opt})
 	return
 }
 
@@ -237,3 +231,11 @@ type FuncListener struct {
 }
 
 func (f FuncListener) HandleEvent(event string, data any) { f.fn(event, data) }
+
+type Logger interface {
+	Logf(fmt string, v ...any)
+}
+
+type NullLogger struct{}
+
+func (NullLogger) Logf(string, ...any) {}

@@ -25,7 +25,6 @@ func expectRecvCharsetSubnegotiation(conn *MockConn, cmd charsetByte, v ...any) 
 	args := []any{optionByte(Charset), cmd}
 	args = append(args, v...)
 	conn.EXPECT().Logf(
-		DEBUG,
 		"RECV: IAC SB %s %s %s IAC SE",
 		args...,
 	)
@@ -33,7 +32,6 @@ func expectRecvCharsetSubnegotiation(conn *MockConn, cmd charsetByte, v ...any) 
 
 func expectCharsetRejected(conn *MockConn) {
 	conn.EXPECT().Logf(
-		DEBUG,
 		"SEND: IAC SB %s %s IAC SE",
 		optionByte(Charset),
 		charsetByte(charsetRejected),
@@ -43,7 +41,6 @@ func expectCharsetRejected(conn *MockConn) {
 func TestEmptySubnegotiationData(t *testing.T) {
 	withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
 		conn.EXPECT().Logf(
-			DEBUG,
 			"RECV: IAC SB %s IAC SE",
 			optionByte(Charset),
 		)
@@ -126,7 +123,6 @@ func TestAcceptEncodingRequest(t *testing.T) {
 			}
 			expectRecvCharsetSubnegotiation(conn, charsetRequest, test.subnegotiationData)
 			conn.EXPECT().Logf(
-				DEBUG,
 				"SEND: IAC SB %s %s %s IAC SE",
 				optionByte(Charset),
 				charsetByte(charsetAccepted),
@@ -155,7 +151,6 @@ func TestEncodingRequestAccepted(t *testing.T) {
 		co.Option = mockOption
 
 		conn.EXPECT().Logf(
-			DEBUG,
 			"RECV: IAC SB %s %s %s IAC SE",
 			optionByte(Charset),
 			charsetByte(charsetAccepted),
@@ -216,7 +211,6 @@ func TestUpdateTransmitBinary(t *testing.T) {
 func TestRejectsTTable(t *testing.T) {
 	withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
 		conn.EXPECT().Logf(
-			DEBUG,
 			"RECV: IAC SB %s %s %s IAC SE",
 			optionByte(Charset),
 			charsetByte(charsetTTableIs),
@@ -233,7 +227,6 @@ func TestRejectsTTable(t *testing.T) {
 func TestCharsetRejected(t *testing.T) {
 	withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
 		conn.EXPECT().Logf(
-			DEBUG,
 			"RECV: IAC SB %s %s %s IAC SE",
 			optionByte(Charset),
 			charsetByte(charsetRejected),

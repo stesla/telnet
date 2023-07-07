@@ -96,7 +96,7 @@ var encodings = map[string]encoding.Encoding{
 }
 
 func (c *CharsetOption) log(fmt string, args ...any) {
-	c.Conn().Logf(DEBUG, fmt, args...)
+	c.Conn().Logf(fmt, args...)
 }
 
 func (c *CharsetOption) logCharsetCommand(fmt string, cmd charsetByte, v ...any) {
