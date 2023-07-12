@@ -14,7 +14,6 @@ type Option interface {
 	EnabledForThem() bool
 	EnabledForUs() bool
 	Subnegotiation([]byte)
-	Update(option byte, theyChanged, them, weChanged, us bool)
 
 	disableThem() error
 	disableUs() error
@@ -73,8 +72,6 @@ func (o *option) Subnegotiation(bytes []byte) {
 	o.conn.Logf("RECV: IAC SB %s %q IAC SE", optionByte(o.Byte()), bytes)
 }
 
-func (o *option) Update(byte, bool, bool, bool, bool) {}
-
 func (o *option) disableThem() error {
 	return o.disable(&o.them, DONT)
 }
@@ -128,18 +125,24 @@ func (o *option) enable(state *telnetQState, cmd byte) error {
 	return nil
 }
 
-func (o *option) receive(c byte) error {
+func (o *option) receive(c byte) (err error) {
+	us, them := o.EnabledForUs(), o.EnabledForThem()
 	switch c {
 	case DO:
-		return o.receiveEnableRequest(&o.us, o.allowUs, WILL, WONT)
+		err = o.receiveEnableRequest(&o.us, o.allowUs, WILL, WONT)
 	case DONT:
-		return o.receiveDisableDemand(&o.us, WILL, WONT)
+		err = o.receiveDisableDemand(&o.us, WILL, WONT)
 	case WILL:
-		return o.receiveEnableRequest(&o.them, o.allowThem, DO, DONT)
+		err = o.receiveEnableRequest(&o.them, o.allowThem, DO, DONT)
 	case WONT:
-		return o.receiveDisableDemand(&o.them, DO, DONT)
+		err = o.receiveDisableDemand(&o.them, DO, DONT)
 	}
-	return nil
+	weChanged := o.EnabledForUs() != us
+	theyChanged := o.EnabledForThem() != them
+	if theyChanged || weChanged {
+		o.sink.SendEvent("update-option", UpdateOptionEvent{o, theyChanged, weChanged})
+	}
+	return
 }
 
 func (o *option) receiveEnableRequest(state *telnetQState, allowed bool, accept, reject byte) error {
@@ -220,4 +223,10 @@ func (s telnetQState) String() string {
 	default:
 		panic("unknown state")
 	}
+}
+
+type UpdateOptionEvent struct {
+	Option
+	TheyChanged bool
+	WeChanged   bool
 }

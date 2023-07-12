@@ -20,19 +20,29 @@ func TestUseBinary(t *testing.T) {
 }
 
 func TestTransmitBinaryOption(t *testing.T) {
-	var h Option = NewTransmitBinaryOption()
+	h := NewTransmitBinaryOption()
+	assert.Implements(t, (*Option)(nil), h)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
+	conn.EXPECT().AddListener(h)
 	h.Bind(conn, nil)
 
 	assert.Equal(t, byte(TransmitBinary), h.Byte())
 
+	opt := NewMockOption(ctrl)
+	opt.EXPECT().Byte().Return(byte(TransmitBinary)).AnyTimes()
+
+	opt.EXPECT().EnabledForThem().Return(false)
+	opt.EXPECT().EnabledForUs().Return(false)
 	conn.EXPECT().SetReadEncoding(ASCII)
 	conn.EXPECT().SetWriteEncoding(ASCII)
-	h.Update(uint8(TransmitBinary), true, false, true, false)
+	h.HandleEvent("update-option", UpdateOptionEvent{opt, true, true})
 
+	opt.EXPECT().EnabledForThem().Return(true)
+	opt.EXPECT().EnabledForUs().Return(true)
 	conn.EXPECT().SetReadEncoding(Binary)
 	conn.EXPECT().SetWriteEncoding(Binary)
-	h.Update(uint8(TransmitBinary), true, true, true, true)
+	h.HandleEvent("update-option", UpdateOptionEvent{opt, true, true})
 }

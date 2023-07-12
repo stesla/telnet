@@ -90,8 +90,6 @@ func TestOption(t *testing.T) {
 	conn.BindOption(option2)
 
 	buf := make([]byte, 8)
-	option2.EXPECT().Update(uint8(Echo), true, true, false, false)
-	option2.EXPECT().Update(uint8(Echo), false, true, true, true)
 	n, err := conn.Read(buf)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
@@ -99,9 +97,9 @@ func TestOption(t *testing.T) {
 		IAC, DO, Echo,
 		IAC, WILL, Echo,
 	}, out.Bytes())
-	them, us := conn.OptionEnabled(Echo)
-	assert.True(t, them)
-	assert.True(t, us)
+	opt := conn.Option(Echo)
+	assert.True(t, opt.EnabledForThem())
+	assert.True(t, opt.EnabledForUs())
 
 	expectReceiveOptionCommand(logger, WONT, Echo)
 	expectSendOptionCommand(logger, DONT, Echo)
@@ -116,8 +114,6 @@ func TestOption(t *testing.T) {
 		'i',
 	})
 	out.Reset()
-	option2.EXPECT().Update(uint8(Echo), true, false, false, true)
-	option2.EXPECT().Update(uint8(Echo), false, false, true, false)
 	n, err = conn.Read(buf)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("hi"), buf[:n])
@@ -125,9 +121,9 @@ func TestOption(t *testing.T) {
 		IAC, DONT, Echo,
 		IAC, WONT, Echo,
 	}, out.Bytes())
-	them, us = conn.OptionEnabled(Echo)
-	assert.False(t, them)
-	assert.False(t, us)
+	opt = conn.Option(Echo)
+	assert.False(t, opt.EnabledForThem())
+	assert.False(t, opt.EnabledForUs())
 }
 
 func TestEnableOption(t *testing.T) {
@@ -256,21 +252,28 @@ func TestSubnegotiationForUnsupportedOption(t *testing.T) {
 }
 
 func TestSuppresGoAhead(t *testing.T) {
-	var h Option = NewSuppressGoAheadOption()
+	h := NewSuppressGoAheadOption()
+	assert.Implements(t, (*Option)(nil), h)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
+
+	conn.EXPECT().AddListener(h)
 	h.Bind(conn, nil)
 
 	assert.Equal(t, byte(SuppressGoAhead), h.Byte())
 
+	opt := NewMockOption(ctrl)
+	opt.EXPECT().Byte().Return(byte(SuppressGoAhead)).AnyTimes()
+
+	opt.EXPECT().EnabledForUs().Return(true)
 	conn.EXPECT().SuppressGoAhead(true)
-	h.Update(uint8(SuppressGoAhead), false, false, true, true)
+	h.HandleEvent("update-option", UpdateOptionEvent{opt, false, true})
 
+	opt.EXPECT().EnabledForUs().Return(false)
 	conn.EXPECT().SuppressGoAhead(false)
-	h.Update(uint8(SuppressGoAhead), true, true, true, false)
-
-	h.Update(uint8(Echo), true, true, true, true)
+	h.HandleEvent("update-option", UpdateOptionEvent{opt, false, true})
 }
 
 func TestRequestCharset(t *testing.T) {

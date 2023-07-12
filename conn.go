@@ -21,7 +21,7 @@ type Conn interface {
 	BindOption(o Option)
 	EnableOptionForThem(option byte, enable bool) error
 	EnableOptionForUs(option byte, enable bool) error
-	OptionEnabled(option byte) (them, us bool)
+	Option(option byte) Option
 
 	RequestEncoding(encoding.Encoding) error
 	Send(p []byte) (n int, err error)
@@ -102,10 +102,8 @@ func (c *connection) EnableOptionForUs(option byte, enable bool) error {
 	return fn()
 }
 
-func (c *connection) OptionEnabled(option byte) (them, us bool) {
-	opt := c.opts.get(option)
-	them, us = opt.EnabledForThem(), opt.EnabledForUs()
-	return
+func (c *connection) Option(option byte) Option {
+	return c.opts.get(option)
 }
 
 func (c *connection) Read(p []byte) (n int, err error) {
@@ -123,7 +121,7 @@ func (c *connection) RemoveListener(l EventListener) {
 }
 
 func (c *connection) RequestEncoding(enc encoding.Encoding) error {
-	if _, us := c.OptionEnabled(Charset); !us {
+	if opt := c.Option(Charset); !opt.EnabledForUs() {
 		return errors.New("charset option not enabled")
 	}
 	msg := []byte{IAC, SB, charsetRequest}
@@ -188,17 +186,10 @@ func (c *connection) handleCommand(cmd any) (err error) {
 		// do nothing
 	case *telnetOptionCommand:
 		opt := c.opts.get(byte(t.opt))
-		them, us := opt.EnabledForThem(), opt.EnabledForUs()
 		err = opt.receive(t.cmd)
 		if err != nil {
 			return
 		}
-		newThem, newUs := opt.EnabledForThem(), opt.EnabledForUs()
-		theyChanged := them != newThem
-		weChanged := us != newUs
-		c.opts.each(func(o Option) {
-			o.Update(opt.Byte(), theyChanged, newThem, weChanged, newUs)
-		})
 	case *telnetSubnegotiation:
 		option := c.opts.get(t.opt)
 		option.Subnegotiation(t.bytes)
@@ -214,11 +205,21 @@ func NewSuppressGoAheadOption() *SuppressGoAheadOption {
 	return &SuppressGoAheadOption{Option: NewOption(SuppressGoAhead)}
 }
 
+func (o *SuppressGoAheadOption) Bind(conn Conn, sink EventSink) {
+	o.Option.Bind(conn, sink)
+	conn.AddListener(o)
+}
+
 func (o *SuppressGoAheadOption) Subnegotiation([]byte) {}
 
-func (o *SuppressGoAheadOption) Update(option byte, theyChanged, them, weChanged, us bool) {
-	if SuppressGoAhead == option && weChanged {
-		o.Conn().SuppressGoAhead(us)
+func (o *SuppressGoAheadOption) HandleEvent(name string, data any) {
+	event, ok := data.(UpdateOptionEvent)
+	if !ok {
+		return
+	}
+
+	if SuppressGoAhead == event.Option.Byte() && event.WeChanged {
+		o.Conn().SuppressGoAhead(event.Option.EnabledForUs())
 	}
 }
 
@@ -227,10 +228,10 @@ type EventListener interface {
 }
 
 type FuncListener struct {
-	fn func(string, any)
+	Func func(string, any)
 }
 
-func (f FuncListener) HandleEvent(event string, data any) { f.fn(event, data) }
+func (f FuncListener) HandleEvent(event string, data any) { f.Func(event, data) }
 
 type Logger interface {
 	Logf(fmt string, v ...any)

@@ -42,23 +42,29 @@ func NewTransmitBinaryOption() *TransmitBinaryOption {
 	return &TransmitBinaryOption{Option: NewOption(TransmitBinary)}
 }
 
+func (t *TransmitBinaryOption) Bind(conn Conn, sink EventSink) {
+	t.Option.Bind(conn, sink)
+	conn.AddListener(t)
+}
+
 func (t *TransmitBinaryOption) Subnegotiation(_ []byte) {}
 
-func (t *TransmitBinaryOption) Update(option byte, theyChanged, them, weChanged, us bool) {
-	if TransmitBinary != option {
+func (t *TransmitBinaryOption) HandleEvent(name string, data any) {
+	event, ok := data.(UpdateOptionEvent)
+	if !ok {
 		return
 	}
 
-	if theyChanged {
-		if them {
+	if event.TheyChanged {
+		if event.Option.EnabledForThem() {
 			t.Conn().SetReadEncoding(Binary)
 		} else {
 			t.Conn().SetReadEncoding(ASCII)
 		}
 	}
 
-	if weChanged {
-		if us {
+	if event.WeChanged {
+		if event.Option.EnabledForUs() {
 			t.Conn().SetWriteEncoding(Binary)
 		} else {
 			t.Conn().SetWriteEncoding(ASCII)
