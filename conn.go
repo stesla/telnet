@@ -124,7 +124,7 @@ func (c *connection) RequestEncoding(enc encoding.Encoding) error {
 	if opt := c.Option(Charset); !opt.EnabledForUs() {
 		return errors.New("charset option not enabled")
 	}
-	msg := []byte{IAC, SB, charsetRequest}
+	msg := []byte{IAC, SB, Charset, charsetRequest, ';'}
 	str, err := ianaindex.IANA.Name(enc)
 	if err != nil {
 		return err
@@ -132,6 +132,7 @@ func (c *connection) RequestEncoding(enc encoding.Encoding) error {
 	msg = append(msg, str...)
 	msg = append(msg, IAC, SE)
 
+	c.Logf("SEND: IAC SB %s %s ;%s IAC SE", optionByte(Charset), charsetByte(charsetRequest), str)
 	_, err = c.Send(msg)
 	return err
 }

@@ -290,7 +290,7 @@ func TestRequestCharset(t *testing.T) {
 
 	err = conn.RequestEncoding(unicode.UTF8)
 	assert.NoError(t, err)
-	assert.Equal(t, []byte{IAC, SB, charsetRequest, 'U', 'T', 'F', '-', '8', IAC, SE}, out.Bytes())
+	assert.Equal(t, []byte{IAC, SB, Charset, charsetRequest, ';', 'U', 'T', 'F', '-', '8', IAC, SE}, out.Bytes())
 }
 
 func TestSendEvent(t *testing.T) {
