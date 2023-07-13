@@ -16,6 +16,11 @@ func NewCharsetOption() *CharsetOption {
 	return &CharsetOption{Option: NewOption(Charset)}
 }
 
+func (c *CharsetOption) Bind(conn Conn, sink EventSink) {
+	c.Option.Bind(conn, sink)
+	conn.AddListener("update-option", c)
+}
+
 func (c *CharsetOption) Subnegotiation(buf []byte) {
 	if len(buf) == 0 {
 		c.log("RECV: IAC SB %s IAC SE", optionByte(c.Byte()))
@@ -28,8 +33,7 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 	switch cmd {
 	case charsetAccepted:
 		c.enc = c.getEncoding(buf)
-		them, us := c.Conn().OptionEnabled(TransmitBinary)
-		c.Update(TransmitBinary, false, them, false, us)
+		c.updateWithBinaryStatus()
 
 	case charsetRejected:
 		c.Sink().SendEvent("charset-rejected", nil)
@@ -65,9 +69,7 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 		out = append(out, charset...)
 		out = append(out, IAC, SE)
 		c.send(out)
-
-		them, us := c.Conn().OptionEnabled(TransmitBinary)
-		c.Update(TransmitBinary, false, them, false, us)
+		c.updateWithBinaryStatus()
 	case charsetTTableIs:
 		// We don't support TTABLE, but we don't want to leave our peers hanging
 		// if they send us a TTABLE-IS subnegotiation.
@@ -75,13 +77,18 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 	}
 }
 
-func (c *CharsetOption) Update(option byte, theyChanged, them, weChanged, us bool) {
-	switch option {
+func (c *CharsetOption) HandleEvent(data any) {
+	event, ok := data.(UpdateOptionEvent)
+	if !ok {
+		return
+	}
+
+	switch opt := event.Option; opt.Byte() {
 	case TransmitBinary:
 		if c.EnabledForUs() && c.enc != nil {
 			conn := c.Conn()
 			sink := c.Sink()
-			if them && us {
+			if opt.EnabledForThem() && opt.EnabledForUs() {
 				conn.SetEncoding(c.enc)
 				sink.SendEvent("charset-accepted", c.enc)
 			} else {
@@ -116,6 +123,14 @@ func (c *CharsetOption) selectEncoding(names [][]byte) (charset []byte, enc enco
 		}
 	}
 	return
+}
+
+func (c *CharsetOption) updateWithBinaryStatus() {
+	c.HandleEvent(UpdateOptionEvent{
+		c.Conn().Option(TransmitBinary),
+		false,
+		false,
+	})
 }
 
 func (*CharsetOption) getEncoding(name []byte) encoding.Encoding {

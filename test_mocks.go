@@ -35,15 +35,15 @@ func (m *MockConn) EXPECT() *MockConnMockRecorder {
 }
 
 // AddListener mocks base method.
-func (m *MockConn) AddListener(arg0 EventListener) {
+func (m *MockConn) AddListener(arg0 string, arg1 EventListener) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddListener", arg0)
+	m.ctrl.Call(m, "AddListener", arg0, arg1)
 }
 
 // AddListener indicates an expected call of AddListener.
-func (mr *MockConnMockRecorder) AddListener(arg0 interface{}) *gomock.Call {
+func (mr *MockConnMockRecorder) AddListener(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddListener", reflect.TypeOf((*MockConn)(nil).AddListener), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddListener", reflect.TypeOf((*MockConn)(nil).AddListener), arg0, arg1)
 }
 
 // BindOption mocks base method.
@@ -103,19 +103,18 @@ func (mr *MockConnMockRecorder) Logf(arg0 interface{}, arg1 ...interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logf", reflect.TypeOf((*MockConn)(nil).Logf), varargs...)
 }
 
-// OptionEnabled mocks base method.
-func (m *MockConn) OptionEnabled(arg0 byte) (bool, bool) {
+// Option mocks base method.
+func (m *MockConn) Option(arg0 byte) Option {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OptionEnabled", arg0)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(bool)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "Option", arg0)
+	ret0, _ := ret[0].(Option)
+	return ret0
 }
 
-// OptionEnabled indicates an expected call of OptionEnabled.
-func (mr *MockConnMockRecorder) OptionEnabled(arg0 interface{}) *gomock.Call {
+// Option indicates an expected call of Option.
+func (mr *MockConnMockRecorder) Option(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OptionEnabled", reflect.TypeOf((*MockConn)(nil).OptionEnabled), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Option", reflect.TypeOf((*MockConn)(nil).Option), arg0)
 }
 
 // Read mocks base method.
@@ -134,15 +133,15 @@ func (mr *MockConnMockRecorder) Read(arg0 interface{}) *gomock.Call {
 }
 
 // RemoveListener mocks base method.
-func (m *MockConn) RemoveListener(arg0 EventListener) {
+func (m *MockConn) RemoveListener(arg0 string, arg1 EventListener) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RemoveListener", arg0)
+	m.ctrl.Call(m, "RemoveListener", arg0, arg1)
 }
 
 // RemoveListener indicates an expected call of RemoveListener.
-func (mr *MockConnMockRecorder) RemoveListener(arg0 interface{}) *gomock.Call {
+func (mr *MockConnMockRecorder) RemoveListener(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveListener", reflect.TypeOf((*MockConn)(nil).RemoveListener), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveListener", reflect.TypeOf((*MockConn)(nil).RemoveListener), arg0, arg1)
 }
 
 // RequestEncoding mocks base method.
@@ -376,18 +375,6 @@ func (m *MockOption) Subnegotiation(arg0 []byte) {
 func (mr *MockOptionMockRecorder) Subnegotiation(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Subnegotiation", reflect.TypeOf((*MockOption)(nil).Subnegotiation), arg0)
-}
-
-// Update mocks base method.
-func (m *MockOption) Update(arg0 byte, arg1, arg2, arg3, arg4 bool) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Update", arg0, arg1, arg2, arg3, arg4)
-}
-
-// Update indicates an expected call of Update.
-func (mr *MockOptionMockRecorder) Update(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOption)(nil).Update), arg0, arg1, arg2, arg3, arg4)
 }
 
 // disableThem mocks base method.

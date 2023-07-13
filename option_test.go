@@ -27,9 +27,10 @@ func TestQMethodReceive(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
+	sink := NewMockEventSink(ctrl)
 
 	o := NewOption(SuppressGoAhead)
-	o.Bind(conn, nil)
+	o.Bind(conn, sink)
 
 	tests := []*qMethodTest{
 		{state: &o.us, allow: &o.allowUs, receive: DO, start: telnetQNo, permitted: false, end: telnetQNo, expected: WONT},
@@ -60,13 +61,21 @@ func TestQMethodReceive(t *testing.T) {
 		{state: &o.them, allow: &o.allowThem, receive: WONT, start: telnetQWantYesOpposite, end: telnetQNo},
 	}
 	for _, q := range tests {
-		testMsg := fmt.Sprintf("test %s %s %v", commandByte(q.receive), q.start, q.permitted)
+		o.us, o.them = telnetQNo, telnetQNo
 		*q.state, *q.allow = q.start, q.permitted
 		if q.expected != 0 {
 			conn.EXPECT().Logf(gomock.Any(), commandByte(q.expected), optionByte(o.code))
 			conn.EXPECT().Send([]byte{IAC, q.expected, o.code})
 		}
+		if (q.start != telnetQYes && q.end == telnetQYes) || (q.start == telnetQYes && q.end != telnetQYes) {
+			if q.state == &o.them {
+				sink.EXPECT().SendEvent("update-option", UpdateOptionEvent{o, true, false})
+			} else if q.state == &o.us {
+				sink.EXPECT().SendEvent("update-option", UpdateOptionEvent{o, false, true})
+			}
+		}
 		o.receive(q.receive)
+		testMsg := fmt.Sprintf("test %s %s %v", commandByte(q.receive), q.start, q.permitted)
 		assert.Equal(t, q.end, *q.state, testMsg)
 	}
 }
