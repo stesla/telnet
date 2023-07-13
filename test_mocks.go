@@ -35,15 +35,15 @@ func (m *MockConn) EXPECT() *MockConnMockRecorder {
 }
 
 // AddListener mocks base method.
-func (m *MockConn) AddListener(arg0 EventListener) {
+func (m *MockConn) AddListener(arg0 string, arg1 EventListener) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "AddListener", arg0)
+	m.ctrl.Call(m, "AddListener", arg0, arg1)
 }
 
 // AddListener indicates an expected call of AddListener.
-func (mr *MockConnMockRecorder) AddListener(arg0 interface{}) *gomock.Call {
+func (mr *MockConnMockRecorder) AddListener(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddListener", reflect.TypeOf((*MockConn)(nil).AddListener), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddListener", reflect.TypeOf((*MockConn)(nil).AddListener), arg0, arg1)
 }
 
 // BindOption mocks base method.
@@ -133,15 +133,15 @@ func (mr *MockConnMockRecorder) Read(arg0 interface{}) *gomock.Call {
 }
 
 // RemoveListener mocks base method.
-func (m *MockConn) RemoveListener(arg0 EventListener) {
+func (m *MockConn) RemoveListener(arg0 string, arg1 EventListener) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "RemoveListener", arg0)
+	m.ctrl.Call(m, "RemoveListener", arg0, arg1)
 }
 
 // RemoveListener indicates an expected call of RemoveListener.
-func (mr *MockConnMockRecorder) RemoveListener(arg0 interface{}) *gomock.Call {
+func (mr *MockConnMockRecorder) RemoveListener(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveListener", reflect.TypeOf((*MockConn)(nil).RemoveListener), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveListener", reflect.TypeOf((*MockConn)(nil).RemoveListener), arg0, arg1)
 }
 
 // RequestEncoding mocks base method.

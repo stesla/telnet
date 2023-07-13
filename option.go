@@ -2,9 +2,6 @@ package telnet
 
 import "math"
 
-type EventSink interface {
-	SendEvent(event string, data any)
-}
 type Option interface {
 	Allow(them, us bool)
 	Bind(Conn, EventSink)

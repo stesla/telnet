@@ -18,7 +18,7 @@ func NewCharsetOption() *CharsetOption {
 
 func (c *CharsetOption) Bind(conn Conn, sink EventSink) {
 	c.Option.Bind(conn, sink)
-	conn.AddListener(c)
+	conn.AddListener("update-option", c)
 }
 
 func (c *CharsetOption) Subnegotiation(buf []byte) {
@@ -77,7 +77,7 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 	}
 }
 
-func (c *CharsetOption) HandleEvent(name string, data any) {
+func (c *CharsetOption) HandleEvent(data any) {
 	event, ok := data.(UpdateOptionEvent)
 	if !ok {
 		return
@@ -126,7 +126,7 @@ func (c *CharsetOption) selectEncoding(names [][]byte) (charset []byte, enc enco
 }
 
 func (c *CharsetOption) updateWithBinaryStatus() {
-	c.HandleEvent("update-option", UpdateOptionEvent{
+	c.HandleEvent(UpdateOptionEvent{
 		c.Conn().Option(TransmitBinary),
 		false,
 		false,

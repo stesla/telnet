@@ -44,12 +44,12 @@ func NewTransmitBinaryOption() *TransmitBinaryOption {
 
 func (t *TransmitBinaryOption) Bind(conn Conn, sink EventSink) {
 	t.Option.Bind(conn, sink)
-	conn.AddListener(t)
+	conn.AddListener("update-option", t)
 }
 
 func (t *TransmitBinaryOption) Subnegotiation(_ []byte) {}
 
-func (t *TransmitBinaryOption) HandleEvent(name string, data any) {
+func (t *TransmitBinaryOption) HandleEvent(data any) {
 	event, ok := data.(UpdateOptionEvent)
 	if !ok {
 		return

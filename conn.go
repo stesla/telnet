@@ -15,8 +15,8 @@ type Conn interface {
 	io.Writer
 	Logger
 
-	AddListener(EventListener)
-	RemoveListener(EventListener)
+	AddListener(string, EventListener)
+	RemoveListener(string, EventListener)
 
 	BindOption(o Option)
 	EnableOptionForThem(option byte, enable bool) error
@@ -51,7 +51,7 @@ func Server(conn net.Conn) Conn {
 type connection struct {
 	Logger
 
-	listeners       []EventListener
+	listeners       map[string][]EventListener
 	opts            *optionMap
 	r, in           io.Reader
 	w, out          io.Writer
@@ -61,7 +61,7 @@ type connection struct {
 func newConnection(r io.Reader, w io.Writer) *connection {
 	conn := &connection{
 		Logger:    NullLogger{},
-		listeners: []EventListener{},
+		listeners: map[string][]EventListener{},
 		opts:      newOptionMap(),
 		r:         r,
 		w:         w,
@@ -71,8 +71,8 @@ func newConnection(r io.Reader, w io.Writer) *connection {
 	return conn
 }
 
-func (c *connection) AddListener(l EventListener) {
-	c.listeners = append(c.listeners, l)
+func (c *connection) AddListener(event string, l EventListener) {
+	c.listeners[event] = append(c.listeners[event], l)
 }
 
 func (c *connection) BindOption(o Option) {
@@ -110,11 +110,12 @@ func (c *connection) Read(p []byte) (n int, err error) {
 	return c.in.Read(p)
 }
 
-func (c *connection) RemoveListener(l EventListener) {
+func (c *connection) RemoveListener(event string, l EventListener) {
 	var i int
-	for i = range c.listeners {
-		if l == c.listeners[i] {
-			c.listeners = append(c.listeners[:i], c.listeners[i+1:]...)
+	listeners := c.listeners[event]
+	for i = range listeners {
+		if l == listeners[i] {
+			c.listeners[event] = append(listeners[:i], listeners[i+1:]...)
 			return
 		}
 	}
@@ -142,8 +143,8 @@ func (c *connection) Send(p []byte) (int, error) {
 }
 
 func (c *connection) SendEvent(event string, data any) {
-	for _, l := range c.listeners {
-		l.HandleEvent(event, data)
+	for _, l := range c.listeners[event] {
+		l.HandleEvent(data)
 	}
 }
 
@@ -208,12 +209,12 @@ func NewSuppressGoAheadOption() *SuppressGoAheadOption {
 
 func (o *SuppressGoAheadOption) Bind(conn Conn, sink EventSink) {
 	o.Option.Bind(conn, sink)
-	conn.AddListener(o)
+	conn.AddListener("update-option", o)
 }
 
 func (o *SuppressGoAheadOption) Subnegotiation([]byte) {}
 
-func (o *SuppressGoAheadOption) HandleEvent(name string, data any) {
+func (o *SuppressGoAheadOption) HandleEvent(data any) {
 	event, ok := data.(UpdateOptionEvent)
 	if !ok {
 		return
@@ -223,16 +224,6 @@ func (o *SuppressGoAheadOption) HandleEvent(name string, data any) {
 		o.Conn().SuppressGoAhead(event.Option.EnabledForUs())
 	}
 }
-
-type EventListener interface {
-	HandleEvent(string, any)
-}
-
-type FuncListener struct {
-	Func func(string, any)
-}
-
-func (f FuncListener) HandleEvent(event string, data any) { f.Func(event, data) }
 
 type Logger interface {
 	Logf(fmt string, v ...any)

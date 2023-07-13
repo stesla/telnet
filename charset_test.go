@@ -16,7 +16,7 @@ func withCharsetAndConn(t *testing.T, f func(Option, *MockConn, *MockEventSink))
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
 	sink := NewMockEventSink(ctrl)
-	conn.EXPECT().AddListener(h)
+	conn.EXPECT().AddListener("update-option", h)
 	h.Bind(conn, sink)
 	assert.Equal(t, byte(Charset), h.Byte())
 	f(h, conn, sink)
@@ -109,7 +109,7 @@ func TestAcceptEncodingRequest(t *testing.T) {
 			mockOption.EXPECT().EnabledForUs().Return(true).AnyTimes()
 			co.Option = mockOption
 
-			co.HandleEvent("update-option", UpdateOptionEvent{mockOption, false, true})
+			co.HandleEvent(UpdateOptionEvent{mockOption, false, true})
 			expected := []byte{IAC, SB, Charset, charsetAccepted}
 			expected = append(expected, test.encodingName...)
 			expected = append(expected, IAC, SE)
@@ -220,7 +220,7 @@ func TestUpdateTransmitBinary(t *testing.T) {
 			mockBinary.EXPECT().EnabledForThem().Return(test.them).AnyTimes()
 			mockBinary.EXPECT().EnabledForUs().Return(test.us).AnyTimes()
 
-			co.HandleEvent("update-option", UpdateOptionEvent{mockBinary, test.theyChanged, test.weChanged})
+			co.HandleEvent(UpdateOptionEvent{mockBinary, test.theyChanged, test.weChanged})
 		})
 	}
 }

@@ -259,7 +259,7 @@ func TestSuppresGoAhead(t *testing.T) {
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
 
-	conn.EXPECT().AddListener(h)
+	conn.EXPECT().AddListener("update-option", h)
 	h.Bind(conn, nil)
 
 	assert.Equal(t, byte(SuppressGoAhead), h.Byte())
@@ -269,11 +269,11 @@ func TestSuppresGoAhead(t *testing.T) {
 
 	opt.EXPECT().EnabledForUs().Return(true)
 	conn.EXPECT().SuppressGoAhead(true)
-	h.HandleEvent("update-option", UpdateOptionEvent{opt, false, true})
+	h.HandleEvent(UpdateOptionEvent{opt, false, true})
 
 	opt.EXPECT().EnabledForUs().Return(false)
 	conn.EXPECT().SuppressGoAhead(false)
-	h.HandleEvent("update-option", UpdateOptionEvent{opt, false, true})
+	h.HandleEvent(UpdateOptionEvent{opt, false, true})
 }
 
 func TestRequestCharset(t *testing.T) {
@@ -296,10 +296,9 @@ func TestRequestCharset(t *testing.T) {
 func TestSendEvent(t *testing.T) {
 	conn := newConnection(nil, nil)
 	var called bool
-	conn.AddListener(&FuncListener{func(event string, data any) {
+	conn.AddListener("test-event", &FuncListener{func(event any) {
 		called = true
-		assert.Equal(t, "test-event", event)
-		assert.Equal(t, "foo", data)
+		assert.Equal(t, "foo", event)
 	}})
 	conn.SendEvent("test-event", "foo")
 	assert.True(t, called)
@@ -308,12 +307,22 @@ func TestSendEvent(t *testing.T) {
 func TestRemoveListener(t *testing.T) {
 	conn := newConnection(nil, nil)
 	count := 0
-	fn := func(string, any) { count++ }
+	fn := func(any) { count++ }
 	listener := &FuncListener{fn}
-	conn.AddListener(&FuncListener{fn})
-	conn.AddListener(listener)
-	conn.AddListener(&FuncListener{fn})
-	conn.RemoveListener(listener)
+	conn.AddListener("test-event", &FuncListener{fn})
+	conn.AddListener("test-event", listener)
+	conn.AddListener("test-event", &FuncListener{fn})
+	conn.RemoveListener("test-event", listener)
 	conn.SendEvent("test-event", "foo")
 	assert.Equal(t, 2, count)
+}
+
+func TestDifferentEvents(t *testing.T) {
+	conn := newConnection(nil, nil)
+	count := 0
+	fn := func(any) { count++ }
+	conn.AddListener("foo", &FuncListener{fn})
+	conn.AddListener("baz", &FuncListener{fn})
+	conn.SendEvent("foo", "bar")
+	assert.Equal(t, 1, count)
 }
