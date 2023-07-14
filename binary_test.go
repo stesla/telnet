@@ -10,7 +10,7 @@ import (
 
 func TestUseBinary(t *testing.T) {
 	var out bytes.Buffer
-	conn := newConnection(nil, &out)
+	conn := newTestConn(nil, &out)
 	conn.SuppressGoAhead(true)
 	conn.SetEncoding(Binary)
 	n, err := conn.Write([]byte{'h', IAC, 'i'})

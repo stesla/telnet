@@ -5,7 +5,9 @@
 package telnet
 
 import (
+	net "net"
 	reflect "reflect"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 	encoding "golang.org/x/text/encoding"
@@ -58,6 +60,20 @@ func (mr *MockConnMockRecorder) BindOption(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BindOption", reflect.TypeOf((*MockConn)(nil).BindOption), arg0)
 }
 
+// Close mocks base method.
+func (m *MockConn) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockConnMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockConn)(nil).Close))
+}
+
 // EnableOptionForThem mocks base method.
 func (m *MockConn) EnableOptionForThem(arg0 byte, arg1 bool) error {
 	m.ctrl.T.Helper()
@@ -84,6 +100,20 @@ func (m *MockConn) EnableOptionForUs(arg0 byte, arg1 bool) error {
 func (mr *MockConnMockRecorder) EnableOptionForUs(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableOptionForUs", reflect.TypeOf((*MockConn)(nil).EnableOptionForUs), arg0, arg1)
+}
+
+// LocalAddr mocks base method.
+func (m *MockConn) LocalAddr() net.Addr {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LocalAddr")
+	ret0, _ := ret[0].(net.Addr)
+	return ret0
+}
+
+// LocalAddr indicates an expected call of LocalAddr.
+func (mr *MockConnMockRecorder) LocalAddr() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalAddr", reflect.TypeOf((*MockConn)(nil).LocalAddr))
 }
 
 // Logf mocks base method.
@@ -132,6 +162,20 @@ func (mr *MockConnMockRecorder) Read(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockConn)(nil).Read), arg0)
 }
 
+// RemoteAddr mocks base method.
+func (m *MockConn) RemoteAddr() net.Addr {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoteAddr")
+	ret0, _ := ret[0].(net.Addr)
+	return ret0
+}
+
+// RemoteAddr indicates an expected call of RemoteAddr.
+func (mr *MockConnMockRecorder) RemoteAddr() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoteAddr", reflect.TypeOf((*MockConn)(nil).RemoteAddr))
+}
+
 // RemoveListener mocks base method.
 func (m *MockConn) RemoveListener(arg0 string, arg1 EventListener) {
 	m.ctrl.T.Helper()
@@ -173,6 +217,20 @@ func (mr *MockConnMockRecorder) Send(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockConn)(nil).Send), arg0)
 }
 
+// SetDeadline mocks base method.
+func (m *MockConn) SetDeadline(arg0 time.Time) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetDeadline", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetDeadline indicates an expected call of SetDeadline.
+func (mr *MockConnMockRecorder) SetDeadline(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDeadline", reflect.TypeOf((*MockConn)(nil).SetDeadline), arg0)
+}
+
 // SetEncoding mocks base method.
 func (m *MockConn) SetEncoding(arg0 encoding.Encoding) {
 	m.ctrl.T.Helper()
@@ -197,6 +255,20 @@ func (mr *MockConnMockRecorder) SetLogger(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogger", reflect.TypeOf((*MockConn)(nil).SetLogger), arg0)
 }
 
+// SetReadDeadline mocks base method.
+func (m *MockConn) SetReadDeadline(arg0 time.Time) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetReadDeadline", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetReadDeadline indicates an expected call of SetReadDeadline.
+func (mr *MockConnMockRecorder) SetReadDeadline(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReadDeadline", reflect.TypeOf((*MockConn)(nil).SetReadDeadline), arg0)
+}
+
 // SetReadEncoding mocks base method.
 func (m *MockConn) SetReadEncoding(arg0 encoding.Encoding) {
 	m.ctrl.T.Helper()
@@ -207,6 +279,20 @@ func (m *MockConn) SetReadEncoding(arg0 encoding.Encoding) {
 func (mr *MockConnMockRecorder) SetReadEncoding(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReadEncoding", reflect.TypeOf((*MockConn)(nil).SetReadEncoding), arg0)
+}
+
+// SetWriteDeadline mocks base method.
+func (m *MockConn) SetWriteDeadline(arg0 time.Time) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetWriteDeadline", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetWriteDeadline indicates an expected call of SetWriteDeadline.
+func (mr *MockConnMockRecorder) SetWriteDeadline(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWriteDeadline", reflect.TypeOf((*MockConn)(nil).SetWriteDeadline), arg0)
 }
 
 // SetWriteEncoding mocks base method.

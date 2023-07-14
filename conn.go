@@ -11,8 +11,7 @@ import (
 )
 
 type Conn interface {
-	io.Reader
-	io.Writer
+	net.Conn
 	Logger
 
 	AddListener(string, EventListener)
@@ -33,7 +32,7 @@ type Conn interface {
 }
 
 func Client(conn net.Conn) Conn {
-	return newConnection(conn, conn)
+	return newConnection(conn)
 }
 
 func Dial(addr string) (Conn, error) {
@@ -45,26 +44,26 @@ func Dial(addr string) (Conn, error) {
 }
 
 func Server(conn net.Conn) Conn {
-	return newConnection(conn, conn)
+	return newConnection(conn)
 }
 
 type connection struct {
+	net.Conn
 	Logger
 
 	listeners       map[string][]EventListener
 	opts            *optionMap
-	r, in           io.Reader
-	w, out          io.Writer
+	in              io.Reader
+	out             io.Writer
 	suppressGoAhead bool
 }
 
-func newConnection(r io.Reader, w io.Writer) *connection {
+func newConnection(upstream net.Conn) *connection {
 	conn := &connection{
+		Conn:      upstream,
 		Logger:    NullLogger{},
 		listeners: map[string][]EventListener{},
 		opts:      newOptionMap(),
-		r:         r,
-		w:         w,
 	}
 	conn.opts.each(func(o Option) { o.Bind(conn, conn) })
 	conn.SetEncoding(ASCII)
@@ -139,7 +138,7 @@ func (c *connection) RequestEncoding(enc encoding.Encoding) error {
 }
 
 func (c *connection) Send(p []byte) (int, error) {
-	return c.w.Write(p)
+	return c.Conn.Write(p)
 }
 
 func (c *connection) SendEvent(event string, data any) {
@@ -158,12 +157,12 @@ func (c *connection) SetLogger(logger Logger) {
 }
 
 func (c *connection) SetReadEncoding(enc encoding.Encoding) {
-	c.in = enc.NewDecoder().Reader(NewReader(c.r, c.handleCommand))
+	c.in = enc.NewDecoder().Reader(NewReader(c.Conn, c.handleCommand))
 }
 
 func (c *connection) SetWriteEncoding(enc encoding.Encoding) {
 
-	c.out = enc.NewEncoder().Writer(NewWriter(c.w))
+	c.out = enc.NewEncoder().Writer(NewWriter(c.Conn))
 }
 
 func (c *connection) SuppressGoAhead(enabled bool) {

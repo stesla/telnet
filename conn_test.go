@@ -2,7 +2,7 @@ package telnet
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	gomock "github.com/golang/mock/gomock"
@@ -15,7 +15,7 @@ func TestReadGoAhead(t *testing.T) {
 	defer ctrl.Finish()
 
 	in := bytes.NewBuffer([]byte{'h', IAC, GA, 'i'})
-	conn := newConnection(in, nil)
+	conn := newTestConn(in, nil)
 
 	logger := NewMockLogger(ctrl)
 	conn.SetLogger(logger)
@@ -30,7 +30,7 @@ func TestReadGoAhead(t *testing.T) {
 
 func TestWriteGoAhead(t *testing.T) {
 	var out bytes.Buffer
-	conn := newConnection(nil, &out)
+	conn := newTestConn(nil, &out)
 	n, err := conn.Write([]byte("foo"))
 	assert.NoError(t, err)
 	assert.Equal(t, 3, n)
@@ -70,7 +70,7 @@ func TestOption(t *testing.T) {
 		IAC, DO, Echo,
 		'i',
 	})
-	conn := newConnection(in, &out)
+	conn := newTestConn(in, &out)
 
 	logger := NewMockLogger(ctrl)
 	conn.SetLogger(logger)
@@ -130,7 +130,7 @@ func TestEnableOption(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	conn := newConnection(nil, nil)
+	conn := newTestConn(nil, nil)
 
 	mockOption := NewMockOption(ctrl)
 	mockOption.EXPECT().Bind(conn, conn)
@@ -163,8 +163,8 @@ func TestNaiveOptions(t *testing.T) {
 	for i, test := range tests {
 		in := bytes.NewBuffer(test.in)
 		var out bytes.Buffer
-		conn := newConnection(in, &out)
-		buf, err := ioutil.ReadAll(conn)
+		conn := newTestConn(in, &out)
+		buf, err := io.ReadAll(conn)
 		assert.NoError(t, err, "test %d", i)
 		assert.Equal(t, test.expectedr, buf, "test %d", i)
 		assert.Equal(t, test.expectedw, out.Bytes(), "test %d", i)
@@ -174,10 +174,10 @@ func TestNaiveOptions(t *testing.T) {
 func TestASCIIByDefault(t *testing.T) {
 	in := bytes.NewBuffer([]byte{'h', IAC, IAC, 'i'})
 	var out bytes.Buffer
-	conn := newConnection(in, &out)
+	conn := newTestConn(in, &out)
 	conn.SuppressGoAhead(true)
 
-	buf, err := ioutil.ReadAll(conn)
+	buf, err := io.ReadAll(conn)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("h\x1ai"), buf)
 	out.Reset()
@@ -191,11 +191,11 @@ func TestASCIIByDefault(t *testing.T) {
 func TestSetReadEncoding(t *testing.T) {
 	in := bytes.NewBuffer([]byte{0xe2, 0x80, 0xbb})
 	var out bytes.Buffer
-	conn := newConnection(in, &out)
+	conn := newTestConn(in, &out)
 	conn.SuppressGoAhead(true)
 	conn.SetEncoding(unicode.UTF8)
 
-	buf, err := ioutil.ReadAll(conn)
+	buf, err := io.ReadAll(conn)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte("※"), buf)
 
@@ -210,7 +210,7 @@ func TestSubnegotiation(t *testing.T) {
 	defer ctrl.Finish()
 
 	in := bytes.NewBuffer([]byte{IAC, SB, Echo, 'h', 'i', IAC, SE})
-	conn := newConnection(in, nil)
+	conn := newTestConn(in, nil)
 
 	logger := NewMockLogger(ctrl)
 	conn.SetLogger(logger)
@@ -221,7 +221,7 @@ func TestSubnegotiation(t *testing.T) {
 	conn.BindOption(option)
 
 	option.EXPECT().Subnegotiation([]byte("hi"))
-	buf, err := ioutil.ReadAll(conn)
+	buf, err := io.ReadAll(conn)
 	assert.NoError(t, err)
 	assert.Empty(t, buf)
 }
@@ -235,7 +235,7 @@ func TestSubnegotiationForUnsupportedOption(t *testing.T) {
 	defer ctrl.Finish()
 
 	in := bytes.NewBuffer([]byte{IAC, SB, Echo, 'h', 'i', IAC, SE})
-	conn := newConnection(in, nil)
+	conn := newTestConn(in, nil)
 
 	logger := NewMockLogger(ctrl)
 	logger.EXPECT().Logf(
@@ -246,7 +246,7 @@ func TestSubnegotiationForUnsupportedOption(t *testing.T) {
 
 	conn.SetLogger(logger)
 
-	buf, err := ioutil.ReadAll(conn)
+	buf, err := io.ReadAll(conn)
 	assert.NoError(t, err)
 	assert.Empty(t, buf)
 }
@@ -278,7 +278,7 @@ func TestSuppresGoAhead(t *testing.T) {
 
 func TestRequestCharset(t *testing.T) {
 	var out bytes.Buffer
-	conn := newConnection(nil, &out)
+	conn := newTestConn(nil, &out)
 
 	err := conn.RequestEncoding(unicode.UTF8)
 	assert.Error(t, err)
@@ -294,7 +294,7 @@ func TestRequestCharset(t *testing.T) {
 }
 
 func TestSendEvent(t *testing.T) {
-	conn := newConnection(nil, nil)
+	conn := newTestConn(nil, nil)
 	var called bool
 	conn.AddListener("test-event", &FuncListener{func(event any) {
 		called = true
@@ -305,7 +305,7 @@ func TestSendEvent(t *testing.T) {
 }
 
 func TestRemoveListener(t *testing.T) {
-	conn := newConnection(nil, nil)
+	conn := newTestConn(nil, nil)
 	count := 0
 	fn := func(any) { count++ }
 	listener := &FuncListener{fn}
@@ -318,7 +318,7 @@ func TestRemoveListener(t *testing.T) {
 }
 
 func TestDifferentEvents(t *testing.T) {
-	conn := newConnection(nil, nil)
+	conn := newTestConn(nil, nil)
 	count := 0
 	fn := func(any) { count++ }
 	conn.AddListener("foo", &FuncListener{fn})
