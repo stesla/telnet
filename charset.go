@@ -9,7 +9,8 @@ import (
 
 type CharsetOption struct {
 	Option
-	enc encoding.Encoding
+	enc          encoding.Encoding
+	requestedEnc encoding.Encoding
 }
 
 func NewCharsetOption() *CharsetOption {
@@ -39,7 +40,7 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 		c.Sink().SendEvent("charset-rejected", nil)
 
 	case charsetRequest:
-		if !c.EnabledForUs() {
+		if !c.EnabledForUs() || (c.requestedEnc != nil && c.Conn().Role() == ServerRole) {
 			c.sendCharsetRejected()
 			return
 		}
@@ -78,23 +79,23 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 }
 
 func (c *CharsetOption) HandleEvent(data any) {
-	event, ok := data.(UpdateOptionEvent)
-	if !ok {
-		return
-	}
-
-	switch opt := event.Option; opt.Byte() {
-	case TransmitBinary:
-		if c.EnabledForUs() && c.enc != nil {
-			conn := c.Conn()
-			sink := c.Sink()
-			if opt.EnabledForThem() && opt.EnabledForUs() {
-				conn.SetEncoding(c.enc)
-				sink.SendEvent("charset-accepted", c.enc)
-			} else {
-				conn.SetEncoding(ASCII)
+	switch t := data.(type) {
+	case UpdateOptionEvent:
+		switch opt := t.Option; opt.Byte() {
+		case TransmitBinary:
+			if c.EnabledForUs() && c.enc != nil {
+				conn := c.Conn()
+				sink := c.Sink()
+				if opt.EnabledForThem() && opt.EnabledForUs() {
+					conn.SetEncoding(c.enc)
+					sink.SendEvent("charset-accepted", c.enc)
+				} else {
+					conn.SetEncoding(ASCII)
+				}
 			}
 		}
+	case CharsetRequestedEvent:
+		c.requestedEnc = t.enc
 	}
 }
 

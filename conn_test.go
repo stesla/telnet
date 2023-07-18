@@ -288,6 +288,12 @@ func TestRequestCharset(t *testing.T) {
 	charset.us = telnetQYes
 	conn.BindOption(charset)
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	listener := NewMockEventListener(ctrl)
+	conn.AddListener("charset-requested", listener)
+
+	listener.EXPECT().HandleEvent(CharsetRequestedEvent{unicode.UTF8})
 	err = conn.RequestEncoding(unicode.UTF8)
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{IAC, SB, Charset, charsetRequest, ';', 'U', 'T', 'F', '-', '8', IAC, SE}, out.Bytes())

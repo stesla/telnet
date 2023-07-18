@@ -14,6 +14,8 @@ type Conn interface {
 	net.Conn
 	Logger
 
+	Role() ConnRole
+
 	AddListener(string, EventListener)
 	RemoveListener(string, EventListener)
 
@@ -31,8 +33,15 @@ type Conn interface {
 	SuppressGoAhead(enabled bool)
 }
 
+type ConnRole int
+
+const (
+	ClientRole ConnRole = iota
+	ServerRole
+)
+
 func Client(conn net.Conn) Conn {
-	return newConnection(conn)
+	return newConnection(conn, ClientRole)
 }
 
 func Dial(addr string) (Conn, error) {
@@ -44,10 +53,12 @@ func Dial(addr string) (Conn, error) {
 }
 
 func Server(conn net.Conn) Conn {
-	return newConnection(conn)
+	return newConnection(conn, ServerRole)
 }
 
 type connection struct {
+	role ConnRole
+
 	net.Conn
 	Logger
 
@@ -58,8 +69,9 @@ type connection struct {
 	suppressGoAhead bool
 }
 
-func newConnection(upstream net.Conn) *connection {
+func newConnection(upstream net.Conn, role ConnRole) *connection {
 	conn := &connection{
+		role:      role,
 		Conn:      upstream,
 		Logger:    NullLogger{},
 		listeners: map[string][]EventListener{},
@@ -134,8 +146,13 @@ func (c *connection) RequestEncoding(enc encoding.Encoding) error {
 
 	c.Logf("SEND: IAC SB %s %s ;%s IAC SE", optionByte(Charset), charsetByte(charsetRequest), str)
 	_, err = c.Send(msg)
+	if err == nil {
+		c.SendEvent("charset-requested", CharsetRequestedEvent{enc})
+	}
 	return err
 }
+
+func (c *connection) Role() ConnRole { return c.role }
 
 func (c *connection) Send(p []byte) (int, error) {
 	return c.Conn.Write(p)
@@ -231,3 +248,7 @@ type Logger interface {
 type NullLogger struct{}
 
 func (NullLogger) Logf(string, ...any) {}
+
+type CharsetRequestedEvent struct {
+	enc encoding.Encoding
+}

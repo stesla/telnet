@@ -7,13 +7,15 @@ import (
 	"time"
 )
 
-//go:generate mockgen -package=telnet -destination=test_mocks.go . Conn,Option,Logger,EventSink
+//go:generate mockgen -package=telnet -destination=test_mocks.go . Conn,Option,Logger,EventSink,EventListener
 
+//lint:ignore U1000 this is only used in tests
 type testConn struct {
 	io.Reader
 	io.Writer
 }
 
+//lint:ignore U1000 this is only used in tests
 func newTestConn(r io.Reader, w io.Writer) *connection {
 	if r == nil {
 		var buf bytes.Buffer
@@ -23,7 +25,7 @@ func newTestConn(r io.Reader, w io.Writer) *connection {
 		var buf bytes.Buffer
 		w = &buf
 	}
-	return newConnection(&testConn{r, w})
+	return newConnection(&testConn{r, w}, ClientRole)
 }
 
 func (t *testConn) Close() error                     { return nil }

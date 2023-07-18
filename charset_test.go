@@ -10,8 +10,9 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
-func withCharsetAndConn(t *testing.T, f func(Option, *MockConn, *MockEventSink)) {
-	var h Option = NewCharsetOption()
+func withCharsetAndConn(t *testing.T, f func(*CharsetOption, *MockConn, *MockEventSink)) {
+	h := NewCharsetOption()
+	assert.Implements(t, (*Option)(nil), h)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	conn := NewMockConn(ctrl)
@@ -40,7 +41,7 @@ func expectCharsetRejected(conn *MockConn) {
 }
 
 func TestEmptySubnegotiationData(t *testing.T) {
-	withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
+	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 		conn.EXPECT().Logf(
 			"RECV: IAC SB %s IAC SE",
 			optionByte(Charset),
@@ -49,7 +50,29 @@ func TestEmptySubnegotiationData(t *testing.T) {
 	})
 }
 func TestRejectIfNotEnabled(t *testing.T) {
-	withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
+	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
+		expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
+		conn.EXPECT().Send(expected)
+		data := []byte{charsetRequest}
+		subdata := []byte("[TTABLE]\x01;US-ASCII;UTF-8")
+		data = append(data, subdata...)
+		expectRecvCharsetSubnegotiation(conn, charsetRequest, string(subdata))
+		expectCharsetRejected(conn)
+		h.Subnegotiation(data)
+	})
+}
+
+func TestRejectIfServerAlreadySentRequest(t *testing.T) {
+	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		option := NewMockOption(ctrl)
+		option.EXPECT().Byte().Return(byte(Charset)).AnyTimes()
+		option.EXPECT().EnabledForUs().Return(true).AnyTimes()
+		option.EXPECT().Conn().Return(conn).AnyTimes()
+		h.Option = option
+		conn.EXPECT().Role().Return(ServerRole).AnyTimes()
+		h.HandleEvent(CharsetRequestedEvent{unicode.UTF8})
 		expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
 		conn.EXPECT().Send(expected)
 		data := []byte{charsetRequest}
@@ -70,7 +93,7 @@ func TestRejectWhenEnabled(t *testing.T) {
 		";BOGUS;ENCODING;NAMES",
 	}
 	for _, test := range tests {
-		withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
+		withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 			expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
 			conn.EXPECT().Send(expected)
 			data := []byte{charsetRequest}
@@ -98,18 +121,19 @@ func TestAcceptEncodingRequest(t *testing.T) {
 		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", true, false, false},
 	}
 	for _, test := range tests {
-		withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
+		withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
+			conn.EXPECT().Role().Return(ClientRole).AnyTimes()
+
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			co := h.(*CharsetOption)
 			mockOption := NewMockOption(ctrl)
 			mockOption.EXPECT().Conn().Return(conn).AnyTimes()
 			mockOption.EXPECT().Sink().Return(sink).AnyTimes()
 			mockOption.EXPECT().Byte().Return(byte(Charset)).AnyTimes()
 			mockOption.EXPECT().EnabledForUs().Return(true).AnyTimes()
-			co.Option = mockOption
+			h.Option = mockOption
 
-			co.HandleEvent(UpdateOptionEvent{mockOption, false, true})
+			h.HandleEvent(UpdateOptionEvent{mockOption, false, true})
 			expected := []byte{IAC, SB, Charset, charsetAccepted}
 			expected = append(expected, test.encodingName...)
 			expected = append(expected, IAC, SE)
@@ -135,25 +159,26 @@ func TestAcceptEncodingRequest(t *testing.T) {
 			)
 			data := []byte{charsetRequest}
 			data = append(data, test.subnegotiationData...)
-			h.Subnegotiation(data)
 
-			assert.Equal(t, test.encoding, co.enc)
+			conn.EXPECT().Role().Return(ServerRole).AnyTimes()
+			h.requestedEnc = unicode.UTF8
+			h.Subnegotiation(data)
+			assert.Equal(t, test.encoding, h.enc)
 		})
 	}
 }
 
 func TestEncodingRequestAccepted(t *testing.T) {
-	withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
+	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		co := h.(*CharsetOption)
 		mockOption := NewMockOption(ctrl)
 		mockOption.EXPECT().Conn().Return(conn).AnyTimes()
 		mockOption.EXPECT().Sink().Return(sink).AnyTimes()
 		mockOption.EXPECT().Byte().Return(byte(Charset)).AnyTimes()
 		mockOption.EXPECT().EnabledForUs().Return(true).AnyTimes()
-		co.Option = mockOption
+		h.Option = mockOption
 
 		conn.EXPECT().Logf(
 			"RECV: IAC SB %s %s %s IAC SE",
@@ -197,16 +222,15 @@ func TestUpdateTransmitBinary(t *testing.T) {
 		{false, false, false, false, false, unicode.UTF8, nil},
 	}
 	for _, test := range tests {
-		withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
+		withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			co := h.(*CharsetOption)
-			co.enc = test.enc
+			h.enc = test.enc
 			mockOption := NewMockOption(ctrl)
 			mockOption.EXPECT().Conn().Return(conn).AnyTimes()
 			mockOption.EXPECT().Sink().Return(sink).AnyTimes()
 			mockOption.EXPECT().EnabledForUs().Return(test.enabled).AnyTimes()
-			co.Option = mockOption
+			h.Option = mockOption
 
 			if test.expected != nil {
 				conn.EXPECT().SetEncoding(test.expected)
@@ -220,13 +244,13 @@ func TestUpdateTransmitBinary(t *testing.T) {
 			mockBinary.EXPECT().EnabledForThem().Return(test.them).AnyTimes()
 			mockBinary.EXPECT().EnabledForUs().Return(test.us).AnyTimes()
 
-			co.HandleEvent(UpdateOptionEvent{mockBinary, test.theyChanged, test.weChanged})
+			h.HandleEvent(UpdateOptionEvent{mockBinary, test.theyChanged, test.weChanged})
 		})
 	}
 }
 
 func TestRejectsTTable(t *testing.T) {
-	withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
+	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 		conn.EXPECT().Logf(
 			"RECV: IAC SB %s %s %s IAC SE",
 			optionByte(Charset),
@@ -242,7 +266,7 @@ func TestRejectsTTable(t *testing.T) {
 }
 
 func TestCharsetRejected(t *testing.T) {
-	withCharsetAndConn(t, func(h Option, conn *MockConn, sink *MockEventSink) {
+	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 		conn.EXPECT().Logf(
 			"RECV: IAC SB %s %s %s IAC SE",
 			optionByte(Charset),
