@@ -11,7 +11,7 @@ import (
 )
 
 func withCharsetAndConn(t *testing.T, f func(*CharsetOption, *MockConn, *MockEventSink)) {
-	h := NewCharsetOption()
+	h := NewCharsetOption(true)
 	assert.Implements(t, (*Option)(nil), h)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -112,16 +112,20 @@ func TestAcceptEncodingRequest(t *testing.T) {
 		subnegotiationData   string
 		binaryThem, binaryUs bool
 		expected             bool
+		requireBinary        bool
 	}{
-		{ASCII, "US-ASCII", "[TTABLE]\x01;US-ASCII;CP437", true, true, true},
-		{charmap.ISO8859_1, "ISO-8859-1", ";ISO-8859-1;US-ASCII;CP437", true, true, true},
-		{charmap.CodePage437, "CP437", ";CP437;US-ASCII", true, true, true},
-		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", true, true, true},
-		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", false, true, false},
-		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", true, false, false},
+		{ASCII, "US-ASCII", "[TTABLE]\x01;US-ASCII;CP437", true, true, true, true},
+		{charmap.ISO8859_1, "ISO-8859-1", ";ISO-8859-1;US-ASCII;CP437", true, true, true, true},
+		{charmap.CodePage437, "CP437", ";CP437;US-ASCII", true, true, true, true},
+		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", true, true, true, true},
+		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", false, true, false, true},
+		{unicode.UTF8, "UTF-8", ";UTF-8;ISO-8859-1;US-ASCII;CP437", true, false, false, true},
+		{unicode.UTF8, "UTF-8", ";UTF-8", false, false, true, false},
 	}
 	for _, test := range tests {
 		withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
+			h.requireBinary = test.requireBinary
+
 			conn.EXPECT().Role().Return(ClientRole).AnyTimes()
 
 			ctrl := gomock.NewController(t)

@@ -11,10 +11,15 @@ type CharsetOption struct {
 	Option
 	enc          encoding.Encoding
 	requestedEnc encoding.Encoding
+
+	requireBinary bool
 }
 
-func NewCharsetOption() *CharsetOption {
-	return &CharsetOption{Option: NewOption(Charset)}
+func NewCharsetOption(requireBinary bool) *CharsetOption {
+	return &CharsetOption{
+		Option:        NewOption(Charset),
+		requireBinary: requireBinary,
+	}
 }
 
 func (c *CharsetOption) Bind(conn Conn, sink EventSink) {
@@ -86,7 +91,7 @@ func (c *CharsetOption) HandleEvent(data any) {
 			if c.EnabledForUs() && c.enc != nil {
 				conn := c.Conn()
 				sink := c.Sink()
-				if opt.EnabledForThem() && opt.EnabledForUs() {
+				if !c.requireBinary || (opt.EnabledForThem() && opt.EnabledForUs()) {
 					conn.SetEncoding(c.enc)
 					sink.SendEvent("charset-accepted", c.enc)
 				} else {
