@@ -1,6 +1,9 @@
 package telnet
 
-import "io"
+import (
+	"bytes"
+	"io"
+)
 
 func NewWriter(w io.Writer) io.Writer {
 	return &writer{out: w}
@@ -11,6 +14,7 @@ type writer struct {
 }
 
 func (w *writer) Write(p []byte) (n int, err error) {
+	var buf bytes.Buffer
 	for _, c := range p {
 		var b []byte
 		switch c {
@@ -23,11 +27,11 @@ func (w *writer) Write(p []byte) (n int, err error) {
 		default:
 			b = []byte{c}
 		}
-		_, err = w.out.Write(b)
-		if err != nil {
-			return
+		if _, err := buf.Write(b); err != nil {
+			return 0, err
 		}
 		n++
 	}
+	_, err = w.out.Write(buf.Bytes())
 	return
 }
