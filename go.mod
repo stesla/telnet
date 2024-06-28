@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/golang/mock v1.6.0
 	github.com/stretchr/testify v1.2.2
-	golang.org/x/text v0.11.0
+	golang.org/x/text v0.16.0
 )
 
 require (
