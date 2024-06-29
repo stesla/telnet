@@ -3,7 +3,6 @@ package telnet
 import (
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
@@ -13,10 +12,8 @@ import (
 func withCharsetAndConn(t *testing.T, f func(*CharsetOption, *MockConn, *MockEventSink)) {
 	h := NewCharsetOption(true)
 	assert.Implements(t, (*Option)(nil), h)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	conn := NewMockConn(ctrl)
-	sink := NewMockEventSink(ctrl)
+	conn := NewMockConn(t)
+	sink := NewMockEventSink(t)
 	conn.EXPECT().AddListener("update-option", h)
 	h.Bind(conn, sink)
 	assert.Equal(t, byte(Charset), h.Byte())
@@ -52,7 +49,7 @@ func TestEmptySubnegotiationData(t *testing.T) {
 func TestRejectIfNotEnabled(t *testing.T) {
 	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 		expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
-		conn.EXPECT().Send(expected)
+		conn.EXPECT().Send(expected).Return(len(expected), nil)
 		data := []byte{charsetRequest}
 		subdata := []byte("[TTABLE]\x01;US-ASCII;UTF-8")
 		data = append(data, subdata...)
@@ -64,17 +61,15 @@ func TestRejectIfNotEnabled(t *testing.T) {
 
 func TestRejectIfServerAlreadySentRequest(t *testing.T) {
 	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		option := NewMockOption(ctrl)
-		option.EXPECT().Byte().Return(byte(Charset)).AnyTimes()
-		option.EXPECT().EnabledForUs().Return(true).AnyTimes()
-		option.EXPECT().Conn().Return(conn).AnyTimes()
+		option := NewMockOption(t)
+		option.EXPECT().Byte().Return(byte(Charset)).Maybe()
+		option.EXPECT().EnabledForUs().Return(true).Maybe()
+		option.EXPECT().Conn().Return(conn).Maybe()
 		h.Option = option
-		conn.EXPECT().Role().Return(ServerRole).AnyTimes()
+		conn.EXPECT().Role().Return(ServerRole).Maybe()
 		h.HandleEvent(CharsetRequestedEvent{unicode.UTF8})
 		expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
-		conn.EXPECT().Send(expected)
+		conn.EXPECT().Send(expected).Return(len(expected), nil)
 		data := []byte{charsetRequest}
 		subdata := []byte("[TTABLE]\x01;US-ASCII;UTF-8")
 		data = append(data, subdata...)
@@ -95,7 +90,7 @@ func TestRejectWhenEnabled(t *testing.T) {
 	for _, test := range tests {
 		withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 			expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
-			conn.EXPECT().Send(expected)
+			conn.EXPECT().Send(expected).Return(len(expected), nil)
 			data := []byte{charsetRequest}
 			data = append(data, test...)
 			expectRecvCharsetSubnegotiation(conn, charsetRequest, test)
@@ -126,27 +121,25 @@ func TestAcceptEncodingRequest(t *testing.T) {
 		withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 			h.requireBinary = test.requireBinary
 
-			conn.EXPECT().Role().Return(ClientRole).AnyTimes()
+			conn.EXPECT().Role().Return(ClientRole).Maybe()
 
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			mockOption := NewMockOption(ctrl)
-			mockOption.EXPECT().Conn().Return(conn).AnyTimes()
-			mockOption.EXPECT().Sink().Return(sink).AnyTimes()
-			mockOption.EXPECT().Byte().Return(byte(Charset)).AnyTimes()
-			mockOption.EXPECT().EnabledForUs().Return(true).AnyTimes()
+			mockOption := NewMockOption(t)
+			mockOption.EXPECT().Conn().Return(conn).Maybe()
+			mockOption.EXPECT().Sink().Return(sink).Maybe()
+			mockOption.EXPECT().Byte().Return(byte(Charset)).Maybe()
+			mockOption.EXPECT().EnabledForUs().Return(true).Maybe()
 			h.Option = mockOption
 
 			h.HandleEvent(UpdateOptionEvent{mockOption, false, true})
 			expected := []byte{IAC, SB, Charset, charsetAccepted}
 			expected = append(expected, test.encodingName...)
 			expected = append(expected, IAC, SE)
-			conn.EXPECT().Send(expected)
+			conn.EXPECT().Send(expected).Return(len(expected), nil)
 
-			mockBinary := NewMockOption(ctrl)
-			mockBinary.EXPECT().Byte().Return(byte(TransmitBinary)).AnyTimes()
-			mockBinary.EXPECT().EnabledForThem().Return(test.binaryThem).AnyTimes()
-			mockBinary.EXPECT().EnabledForUs().Return(test.binaryUs).AnyTimes()
+			mockBinary := NewMockOption(t)
+			mockBinary.EXPECT().Byte().Return(byte(TransmitBinary)).Maybe()
+			mockBinary.EXPECT().EnabledForThem().Return(test.binaryThem).Maybe()
+			mockBinary.EXPECT().EnabledForUs().Return(test.binaryUs).Maybe()
 			conn.EXPECT().Option(uint8(TransmitBinary)).Return(mockBinary)
 			if test.expected {
 				conn.EXPECT().SetEncoding(test.encoding)
@@ -164,7 +157,7 @@ func TestAcceptEncodingRequest(t *testing.T) {
 			data := []byte{charsetRequest}
 			data = append(data, test.subnegotiationData...)
 
-			conn.EXPECT().Role().Return(ServerRole).AnyTimes()
+			conn.EXPECT().Role().Return(ServerRole).Maybe()
 			h.requestedEnc = unicode.UTF8
 			h.Subnegotiation(data)
 			assert.Equal(t, test.encoding, h.enc)
@@ -174,14 +167,11 @@ func TestAcceptEncodingRequest(t *testing.T) {
 
 func TestEncodingRequestAccepted(t *testing.T) {
 	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		mockOption := NewMockOption(ctrl)
-		mockOption.EXPECT().Conn().Return(conn).AnyTimes()
-		mockOption.EXPECT().Sink().Return(sink).AnyTimes()
-		mockOption.EXPECT().Byte().Return(byte(Charset)).AnyTimes()
-		mockOption.EXPECT().EnabledForUs().Return(true).AnyTimes()
+		mockOption := NewMockOption(t)
+		mockOption.EXPECT().Conn().Return(conn).Maybe()
+		mockOption.EXPECT().Sink().Return(sink).Maybe()
+		mockOption.EXPECT().Byte().Return(byte(Charset)).Maybe()
+		mockOption.EXPECT().EnabledForUs().Return(true).Maybe()
 		h.Option = mockOption
 
 		conn.EXPECT().Logf(
@@ -191,10 +181,10 @@ func TestEncodingRequestAccepted(t *testing.T) {
 			"UTF-8",
 		)
 
-		mockBinary := NewMockOption(ctrl)
-		mockBinary.EXPECT().Byte().Return(byte(TransmitBinary)).AnyTimes()
-		mockBinary.EXPECT().EnabledForThem().Return(true).AnyTimes()
-		mockBinary.EXPECT().EnabledForUs().Return(true).AnyTimes()
+		mockBinary := NewMockOption(t)
+		mockBinary.EXPECT().Byte().Return(byte(TransmitBinary)).Maybe()
+		mockBinary.EXPECT().EnabledForThem().Return(true).Maybe()
+		mockBinary.EXPECT().EnabledForUs().Return(true).Maybe()
 
 		conn.EXPECT().Option(uint8(TransmitBinary)).Return(mockBinary)
 		conn.EXPECT().SetEncoding(unicode.UTF8)
@@ -227,13 +217,11 @@ func TestUpdateTransmitBinary(t *testing.T) {
 	}
 	for _, test := range tests {
 		withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
 			h.enc = test.enc
-			mockOption := NewMockOption(ctrl)
-			mockOption.EXPECT().Conn().Return(conn).AnyTimes()
-			mockOption.EXPECT().Sink().Return(sink).AnyTimes()
-			mockOption.EXPECT().EnabledForUs().Return(test.enabled).AnyTimes()
+			mockOption := NewMockOption(t)
+			mockOption.EXPECT().Conn().Return(conn).Maybe()
+			mockOption.EXPECT().Sink().Return(sink).Maybe()
+			mockOption.EXPECT().EnabledForUs().Return(test.enabled).Maybe()
 			h.Option = mockOption
 
 			if test.expected != nil {
@@ -243,10 +231,10 @@ func TestUpdateTransmitBinary(t *testing.T) {
 				}
 			}
 
-			mockBinary := NewMockOption(ctrl)
-			mockBinary.EXPECT().Byte().Return(byte(TransmitBinary)).AnyTimes()
-			mockBinary.EXPECT().EnabledForThem().Return(test.them).AnyTimes()
-			mockBinary.EXPECT().EnabledForUs().Return(test.us).AnyTimes()
+			mockBinary := NewMockOption(t)
+			mockBinary.EXPECT().Byte().Return(byte(TransmitBinary)).Maybe()
+			mockBinary.EXPECT().EnabledForThem().Return(test.them).Maybe()
+			mockBinary.EXPECT().EnabledForUs().Return(test.us).Maybe()
 
 			h.HandleEvent(UpdateOptionEvent{mockBinary, test.theyChanged, test.weChanged})
 		})
@@ -261,7 +249,8 @@ func TestRejectsTTable(t *testing.T) {
 			charsetByte(charsetTTableIs),
 			"\x01bogus",
 		)
-		conn.EXPECT().Send([]byte{IAC, SB, Charset, charsetTTableRejected, IAC, SE})
+		expected := []byte{IAC, SB, Charset, charsetTTableRejected, IAC, SE}
+		conn.EXPECT().Send(expected).Return(len(expected), nil)
 
 		data := []byte{charsetTTableIs, 1}
 		data = append(data, "bogus"...)

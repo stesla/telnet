@@ -5,19 +5,15 @@ import (
 	"io"
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/text/encoding/unicode"
 )
 
 func TestReadGoAhead(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	in := bytes.NewBuffer([]byte{'h', IAC, GA, 'i'})
 	conn := newTestConn(in, nil)
 
-	logger := NewMockLogger(ctrl)
+	logger := NewMockLogger(t)
 	conn.SetLogger(logger)
 
 	logger.EXPECT().Logf("RECV: %s", &telnetGoAhead{})
@@ -60,9 +56,6 @@ func expectSendOptionCommand(logger *MockLogger, cmd, opt byte) {
 }
 
 func TestOption(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	var out bytes.Buffer
 	in := bytes.NewBuffer([]byte{
 		'h',
@@ -72,7 +65,7 @@ func TestOption(t *testing.T) {
 	})
 	conn := newTestConn(in, &out)
 
-	logger := NewMockLogger(ctrl)
+	logger := NewMockLogger(t)
 	conn.SetLogger(logger)
 
 	expectReceiveOptionCommand(logger, WILL, Echo)
@@ -84,9 +77,9 @@ func TestOption(t *testing.T) {
 	option.Allow(true, true)
 	conn.BindOption(option)
 
-	option2 := NewMockOption(ctrl)
+	option2 := NewMockOption(t)
 	option2.EXPECT().Bind(conn, conn)
-	option2.EXPECT().Byte().Return(byte(TransmitBinary)).AnyTimes()
+	option2.EXPECT().Byte().Return(byte(TransmitBinary)).Maybe()
 	conn.BindOption(option2)
 
 	buf := make([]byte, 8)
@@ -127,26 +120,23 @@ func TestOption(t *testing.T) {
 }
 
 func TestEnableOption(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	conn := newTestConn(nil, nil)
 
-	mockOption := NewMockOption(ctrl)
+	mockOption := NewMockOption(t)
 	mockOption.EXPECT().Bind(conn, conn)
-	mockOption.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
+	mockOption.EXPECT().Byte().Return(byte(Echo)).Maybe()
 	conn.BindOption(mockOption)
 
-	mockOption.EXPECT().enableThem()
+	mockOption.EXPECT().enableThem().Return(nil)
 	conn.EnableOptionForThem(Echo, true)
 
-	mockOption.EXPECT().enableUs()
+	mockOption.EXPECT().enableUs().Return(nil)
 	conn.EnableOptionForUs(Echo, true)
 
-	mockOption.EXPECT().disableThem()
+	mockOption.EXPECT().disableThem().Return(nil)
 	conn.EnableOptionForThem(Echo, false)
 
-	mockOption.EXPECT().disableUs()
+	mockOption.EXPECT().disableUs().Return(nil)
 	conn.EnableOptionForUs(Echo, false)
 }
 
@@ -206,17 +196,14 @@ func TestSetReadEncoding(t *testing.T) {
 }
 
 func TestSubnegotiation(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	in := bytes.NewBuffer([]byte{IAC, SB, Echo, 'h', 'i', IAC, SE})
 	conn := newTestConn(in, nil)
 
-	logger := NewMockLogger(ctrl)
+	logger := NewMockLogger(t)
 	conn.SetLogger(logger)
 
-	option := NewMockOption(ctrl)
-	option.EXPECT().Byte().Return(byte(Echo)).AnyTimes()
+	option := NewMockOption(t)
+	option.EXPECT().Byte().Return(byte(Echo)).Maybe()
 	option.EXPECT().Bind(conn, conn)
 	conn.BindOption(option)
 
@@ -231,13 +218,10 @@ func TestSubnegotiationForUnsupportedOption(t *testing.T) {
 	// happen for options we've already negotiated. But, telnet implementations
 	// don't always play by the rules, and if we're interacting with a broken
 	// implementation, logging what they send us is good.
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	in := bytes.NewBuffer([]byte{IAC, SB, Echo, 'h', 'i', IAC, SE})
 	conn := newTestConn(in, nil)
 
-	logger := NewMockLogger(ctrl)
+	logger := NewMockLogger(t)
 	logger.EXPECT().Logf(
 		"RECV: IAC SB %s %q IAC SE",
 		optionByte(Echo),
@@ -255,23 +239,21 @@ func TestSuppresGoAhead(t *testing.T) {
 	h := NewSuppressGoAheadOption()
 	assert.Implements(t, (*Option)(nil), h)
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	conn := NewMockConn(ctrl)
+	conn := NewMockConn(t)
 
 	conn.EXPECT().AddListener("update-option", h)
 	h.Bind(conn, nil)
 
 	assert.Equal(t, byte(SuppressGoAhead), h.Byte())
 
-	opt := NewMockOption(ctrl)
-	opt.EXPECT().Byte().Return(byte(SuppressGoAhead)).AnyTimes()
+	opt := NewMockOption(t)
+	opt.EXPECT().Byte().Return(byte(SuppressGoAhead)).Maybe()
 
-	opt.EXPECT().EnabledForUs().Return(true)
+	opt.EXPECT().EnabledForUs().Return(true).Once()
 	conn.EXPECT().SuppressGoAhead(true)
 	h.HandleEvent(UpdateOptionEvent{opt, false, true})
 
-	opt.EXPECT().EnabledForUs().Return(false)
+	opt.EXPECT().EnabledForUs().Return(false).Once()
 	conn.EXPECT().SuppressGoAhead(false)
 	h.HandleEvent(UpdateOptionEvent{opt, false, true})
 }
@@ -288,9 +270,7 @@ func TestRequestCharset(t *testing.T) {
 	charset.us = telnetQYes
 	conn.BindOption(charset)
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	listener := NewMockEventListener(ctrl)
+	listener := NewMockEventListener(t)
 	conn.AddListener("charset-requested", listener)
 
 	listener.EXPECT().HandleEvent(CharsetRequestedEvent{unicode.UTF8})

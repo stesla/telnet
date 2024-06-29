@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-//go:generate mockgen -package=telnet -destination=test_mocks.go . Conn,Option,Logger,EventSink,EventListener
-
 //lint:ignore U1000 this is only used in tests
 type testConn struct {
 	io.Reader

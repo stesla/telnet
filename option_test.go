@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 type qMethodTest struct {
@@ -24,10 +24,8 @@ type qMethodTest struct {
 }
 
 func TestQMethodReceive(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	conn := NewMockConn(ctrl)
-	sink := NewMockEventSink(ctrl)
+	conn := NewMockConn(t)
+	sink := NewMockEventSink(t)
 
 	o := NewOption(SuppressGoAhead)
 	o.Bind(conn, sink)
@@ -64,8 +62,9 @@ func TestQMethodReceive(t *testing.T) {
 		o.us, o.them = telnetQNo, telnetQNo
 		*q.state, *q.allow = q.start, q.permitted
 		if q.expected != 0 {
-			conn.EXPECT().Logf(gomock.Any(), commandByte(q.expected), optionByte(o.code))
-			conn.EXPECT().Send([]byte{IAC, q.expected, o.code})
+			conn.EXPECT().Logf(mock.Anything, commandByte(q.expected), optionByte(o.code))
+			expected := []byte{IAC, q.expected, o.code}
+			conn.EXPECT().Send(expected).Return(len(expected), nil)
 		}
 		if (q.start != telnetQYes && q.end == telnetQYes) || (q.start == telnetQYes && q.end != telnetQYes) {
 			if q.state == &o.them {
@@ -81,9 +80,7 @@ func TestQMethodReceive(t *testing.T) {
 }
 
 func TestQMethodEnableOrDisable(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	conn := NewMockConn(ctrl)
+	conn := NewMockConn(t)
 
 	o := NewOption(SuppressGoAhead)
 	o.Bind(conn, nil)
@@ -133,8 +130,9 @@ func TestQMethodEnableOrDisable(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %s", action, who, q.start)
 		*q.state = q.start
 		if q.expected != 0 {
-			conn.EXPECT().Logf(gomock.Any(), commandByte(q.expected), optionByte(o.code))
-			conn.EXPECT().Send([]byte{IAC, q.expected, o.code})
+			conn.EXPECT().Logf(mock.Anything, commandByte(q.expected), optionByte(o.code))
+			expected := []byte{IAC, q.expected, o.code}
+			conn.EXPECT().Send(expected).Return(len(expected), nil)
 		}
 		err := q.fn()
 		assert.NoError(t, err, testMsg)

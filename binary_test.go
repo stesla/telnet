@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	gomock "github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,25 +22,23 @@ func TestTransmitBinaryOption(t *testing.T) {
 	h := NewTransmitBinaryOption()
 	assert.Implements(t, (*Option)(nil), h)
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	conn := NewMockConn(ctrl)
+	conn := NewMockConn(t)
 	conn.EXPECT().AddListener("update-option", h)
 	h.Bind(conn, nil)
 
 	assert.Equal(t, byte(TransmitBinary), h.Byte())
 
-	opt := NewMockOption(ctrl)
-	opt.EXPECT().Byte().Return(byte(TransmitBinary)).AnyTimes()
+	opt := NewMockOption(t)
+	opt.EXPECT().Byte().Return(byte(TransmitBinary)).Maybe()
 
-	opt.EXPECT().EnabledForThem().Return(false)
-	opt.EXPECT().EnabledForUs().Return(false)
+	opt.EXPECT().EnabledForThem().Return(false).Once()
+	opt.EXPECT().EnabledForUs().Return(false).Once()
 	conn.EXPECT().SetReadEncoding(ASCII)
 	conn.EXPECT().SetWriteEncoding(ASCII)
 	h.HandleEvent(UpdateOptionEvent{opt, true, true})
 
-	opt.EXPECT().EnabledForThem().Return(true)
-	opt.EXPECT().EnabledForUs().Return(true)
+	opt.EXPECT().EnabledForThem().Return(true).Once()
+	opt.EXPECT().EnabledForUs().Return(true).Once()
 	conn.EXPECT().SetReadEncoding(Binary)
 	conn.EXPECT().SetWriteEncoding(Binary)
 	h.HandleEvent(UpdateOptionEvent{opt, true, true})
