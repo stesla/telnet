@@ -1,10 +1,12 @@
 module github.com/stesla/telnet
 
-go 1.20
+go 1.23.0
+
+toolchain go1.24.1
 
 require (
-	github.com/stretchr/testify v1.9.0
-	golang.org/x/text v0.16.0
+	github.com/stretchr/testify v1.10.0
+	golang.org/x/text v0.24.0
 )
 
 require (
