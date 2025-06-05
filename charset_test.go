@@ -25,15 +25,17 @@ func expectRecvCharsetSubnegotiation(conn *MockConn, cmd charsetByte, v ...any) 
 	args = append(args, v...)
 	conn.EXPECT().Logf(
 		"RECV: IAC SB %s %s %s IAC SE",
-		args...,
+		args,
 	)
 }
 
 func expectCharsetRejected(conn *MockConn) {
 	conn.EXPECT().Logf(
 		"SEND: IAC SB %s %s IAC SE",
-		optionByte(Charset),
-		charsetByte(charsetRejected),
+		[]any{
+			optionByte(Charset),
+			charsetByte(charsetRejected),
+		},
 	)
 }
 
@@ -41,7 +43,7 @@ func TestEmptySubnegotiationData(t *testing.T) {
 	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 		conn.EXPECT().Logf(
 			"RECV: IAC SB %s IAC SE",
-			optionByte(Charset),
+			[]any{optionByte(Charset)},
 		)
 		h.Subnegotiation([]byte{})
 	})
@@ -150,9 +152,11 @@ func TestAcceptEncodingRequest(t *testing.T) {
 			expectRecvCharsetSubnegotiation(conn, charsetRequest, test.subnegotiationData)
 			conn.EXPECT().Logf(
 				"SEND: IAC SB %s %s %s IAC SE",
-				optionByte(Charset),
-				charsetByte(charsetAccepted),
-				test.encodingName,
+				[]any{
+					optionByte(Charset),
+					charsetByte(charsetAccepted),
+					test.encodingName,
+				},
 			)
 			data := []byte{charsetRequest}
 			data = append(data, test.subnegotiationData...)
@@ -176,9 +180,11 @@ func TestEncodingRequestAccepted(t *testing.T) {
 
 		conn.EXPECT().Logf(
 			"RECV: IAC SB %s %s %s IAC SE",
-			optionByte(Charset),
-			charsetByte(charsetAccepted),
-			"UTF-8",
+			[]any{
+				optionByte(Charset),
+				charsetByte(charsetAccepted),
+				"UTF-8",
+			},
 		)
 
 		mockBinary := NewMockOption(t)
@@ -245,9 +251,11 @@ func TestRejectsTTable(t *testing.T) {
 	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 		conn.EXPECT().Logf(
 			"RECV: IAC SB %s %s %s IAC SE",
-			optionByte(Charset),
-			charsetByte(charsetTTableIs),
-			"\x01bogus",
+			[]any{
+				optionByte(Charset),
+				charsetByte(charsetTTableIs),
+				"\x01bogus",
+			},
 		)
 		expected := []byte{IAC, SB, Charset, charsetTTableRejected, IAC, SE}
 		conn.EXPECT().Send(expected).Return(len(expected), nil)
@@ -262,9 +270,11 @@ func TestCharsetRejected(t *testing.T) {
 	withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 		conn.EXPECT().Logf(
 			"RECV: IAC SB %s %s %s IAC SE",
-			optionByte(Charset),
-			charsetByte(charsetRejected),
-			"",
+			[]any{
+				optionByte(Charset),
+				charsetByte(charsetRejected),
+				"",
+			},
 		)
 		sink.EXPECT().SendEvent("charset-rejected", nil)
 

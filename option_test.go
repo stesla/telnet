@@ -62,7 +62,7 @@ func TestQMethodReceive(t *testing.T) {
 		o.us, o.them = telnetQNo, telnetQNo
 		*q.state, *q.allow = q.start, q.permitted
 		if q.expected != 0 {
-			conn.EXPECT().Logf(mock.Anything, commandByte(q.expected), optionByte(o.code))
+			conn.EXPECT().Logf(mock.Anything, []any{commandByte(q.expected), optionByte(o.code)})
 			expected := []byte{IAC, q.expected, o.code}
 			conn.EXPECT().Send(expected).Return(len(expected), nil)
 		}
@@ -130,7 +130,7 @@ func TestQMethodEnableOrDisable(t *testing.T) {
 		testMsg := fmt.Sprintf("test %s %s %s", action, who, q.start)
 		*q.state = q.start
 		if q.expected != 0 {
-			conn.EXPECT().Logf(mock.Anything, commandByte(q.expected), optionByte(o.code))
+			conn.EXPECT().Logf(mock.Anything, []any{commandByte(q.expected), optionByte(o.code)})
 			expected := []byte{IAC, q.expected, o.code}
 			conn.EXPECT().Send(expected).Return(len(expected), nil)
 		}

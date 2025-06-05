@@ -16,7 +16,7 @@ func TestReadGoAhead(t *testing.T) {
 	logger := NewMockLogger(t)
 	conn.SetLogger(logger)
 
-	logger.EXPECT().Logf("RECV: %s", &telnetGoAhead{})
+	logger.EXPECT().Logf("RECV: %s", []any{&telnetGoAhead{}})
 
 	buf := make([]byte, 8)
 	n, err := conn.Read(buf)
@@ -43,15 +43,17 @@ func TestWriteGoAhead(t *testing.T) {
 func expectReceiveOptionCommand(logger *MockLogger, cmd, opt byte) {
 	logger.EXPECT().Logf(
 		"RECV: %s",
-		&telnetOptionCommand{cmd, opt},
+		[]any{&telnetOptionCommand{cmd, opt}},
 	)
 }
 
 func expectSendOptionCommand(logger *MockLogger, cmd, opt byte) {
 	logger.EXPECT().Logf(
 		"SEND: IAC %s %s",
-		commandByte(cmd),
-		optionByte(opt),
+		[]any{
+			commandByte(cmd),
+			optionByte(opt),
+		},
 	)
 }
 
@@ -224,8 +226,10 @@ func TestSubnegotiationForUnsupportedOption(t *testing.T) {
 	logger := NewMockLogger(t)
 	logger.EXPECT().Logf(
 		"RECV: IAC SB %s %q IAC SE",
-		optionByte(Echo),
-		[]byte("hi"),
+		[]any{
+			optionByte(Echo),
+			[]byte("hi"),
+		},
 	)
 
 	conn.SetLogger(logger)
