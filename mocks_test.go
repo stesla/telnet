@@ -559,50 +559,6 @@ func (_c *MockConn_RequestEncoding_Call) RunAndReturn(run func(encoding1 encodin
 	return _c
 }
 
-// Role provides a mock function for the type MockConn
-func (_mock *MockConn) Role() ConnRole {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Role")
-	}
-
-	var r0 ConnRole
-	if returnFunc, ok := ret.Get(0).(func() ConnRole); ok {
-		r0 = returnFunc()
-	} else {
-		r0 = ret.Get(0).(ConnRole)
-	}
-	return r0
-}
-
-// MockConn_Role_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Role'
-type MockConn_Role_Call struct {
-	*mock.Call
-}
-
-// Role is a helper method to define mock.On call
-func (_e *MockConn_Expecter) Role() *MockConn_Role_Call {
-	return &MockConn_Role_Call{Call: _e.mock.On("Role")}
-}
-
-func (_c *MockConn_Role_Call) Run(run func()) *MockConn_Role_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockConn_Role_Call) Return(connRole ConnRole) *MockConn_Role_Call {
-	_c.Call.Return(connRole)
-	return _c
-}
-
-func (_c *MockConn_Role_Call) RunAndReturn(run func() ConnRole) *MockConn_Role_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Send provides a mock function for the type MockConn
 func (_mock *MockConn) Send(p []byte) (int, error) {
 	ret := _mock.Called(p)

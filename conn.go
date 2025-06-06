@@ -14,8 +14,6 @@ type Conn interface {
 	net.Conn
 	Logger
 
-	Role() ConnRole
-
 	AddListener(string, EventListener)
 	RemoveListener(string, EventListener)
 
@@ -33,32 +31,15 @@ type Conn interface {
 	SuppressGoAhead(enabled bool)
 }
 
-type ConnRole int
-
-const (
-	ClientRole ConnRole = iota
-	ServerRole
-)
-
-func Client(conn net.Conn) Conn {
-	return newConnection(conn, ClientRole)
-}
-
 func Dial(addr string) (Conn, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
-	return Client(conn), nil
-}
-
-func Server(conn net.Conn) Conn {
-	return newConnection(conn, ServerRole)
+	return New(conn), nil
 }
 
 type connection struct {
-	role ConnRole
-
 	net.Conn
 	Logger
 
@@ -69,9 +50,8 @@ type connection struct {
 	suppressGoAhead bool
 }
 
-func newConnection(upstream net.Conn, role ConnRole) *connection {
+func New(upstream net.Conn) *connection {
 	conn := &connection{
-		role:      role,
 		Conn:      upstream,
 		Logger:    NullLogger{},
 		listeners: map[string][]EventListener{},
@@ -151,8 +131,6 @@ func (c *connection) RequestEncoding(enc encoding.Encoding) error {
 	}
 	return err
 }
-
-func (c *connection) Role() ConnRole { return c.role }
 
 func (c *connection) Send(p []byte) (int, error) {
 	return c.Conn.Write(p)

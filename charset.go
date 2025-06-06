@@ -12,13 +12,15 @@ type CharsetOption struct {
 	enc          encoding.Encoding
 	requestedEnc encoding.Encoding
 
+	isServer      bool
 	requireBinary bool
 }
 
-func NewCharsetOption(requireBinary bool) *CharsetOption {
+func NewCharsetOption(requireBinary bool, isServer bool) *CharsetOption {
 	return &CharsetOption{
 		Option:        NewOption(Charset),
 		requireBinary: requireBinary,
+		isServer:      isServer,
 	}
 }
 
@@ -45,7 +47,7 @@ func (c *CharsetOption) Subnegotiation(buf []byte) {
 		c.Sink().SendEvent("charset-rejected", nil)
 
 	case charsetRequest:
-		if !c.EnabledForUs() || (c.requestedEnc != nil && c.Conn().Role() == ServerRole) {
+		if !c.EnabledForUs() || (c.requestedEnc != nil && c.isServer) {
 			c.sendCharsetRejected()
 			return
 		}

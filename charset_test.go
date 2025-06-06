@@ -10,7 +10,7 @@ import (
 )
 
 func withCharsetAndConn(t *testing.T, f func(*CharsetOption, *MockConn, *MockEventSink)) {
-	h := NewCharsetOption(true)
+	h := NewCharsetOption(true, false)
 	assert.Implements(t, (*Option)(nil), h)
 	conn := NewMockConn(t)
 	sink := NewMockEventSink(t)
@@ -66,9 +66,7 @@ func TestRejectIfServerAlreadySentRequest(t *testing.T) {
 		option := NewMockOption(t)
 		option.EXPECT().Byte().Return(byte(Charset)).Maybe()
 		option.EXPECT().EnabledForUs().Return(true).Maybe()
-		option.EXPECT().Conn().Return(conn).Maybe()
-		h.Option = option
-		conn.EXPECT().Role().Return(ServerRole).Maybe()
+		h.isServer = true
 		h.HandleEvent(CharsetRequestedEvent{unicode.UTF8})
 		expected := []byte{IAC, SB, Charset, charsetRejected, IAC, SE}
 		conn.EXPECT().Send(expected).Return(len(expected), nil)
@@ -123,8 +121,6 @@ func TestAcceptEncodingRequest(t *testing.T) {
 		withCharsetAndConn(t, func(h *CharsetOption, conn *MockConn, sink *MockEventSink) {
 			h.requireBinary = test.requireBinary
 
-			conn.EXPECT().Role().Return(ClientRole).Maybe()
-
 			mockOption := NewMockOption(t)
 			mockOption.EXPECT().Conn().Return(conn).Maybe()
 			mockOption.EXPECT().Sink().Return(sink).Maybe()
@@ -161,7 +157,6 @@ func TestAcceptEncodingRequest(t *testing.T) {
 			data := []byte{charsetRequest}
 			data = append(data, test.subnegotiationData...)
 
-			conn.EXPECT().Role().Return(ServerRole).Maybe()
 			h.requestedEnc = unicode.UTF8
 			h.Subnegotiation(data)
 			assert.Equal(t, test.encoding, h.enc)

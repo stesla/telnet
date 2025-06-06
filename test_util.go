@@ -23,7 +23,7 @@ func newTestConn(r io.Reader, w io.Writer) *connection {
 		var buf bytes.Buffer
 		w = &buf
 	}
-	return newConnection(&testConn{r, w}, ClientRole)
+	return New(&testConn{r, w})
 }
 
 func (t *testConn) Close() error                     { return nil }
